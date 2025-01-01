@@ -127,9 +127,26 @@ class SegmentAndMap(QDialog):
                 self.start_point = None
                 self.end_point = None
 
+                # Update Data.json with the new segment data
+                self.update_json(segment_data)
+
                 json_data = json.dumps(segment_data)
                 self.dataUpdated.emit(json_data)
 
+    def update_json(self, segment_data):
+        json_path = "Data.json"
+        if os.path.exists(json_path):
+            with open(json_path, "r") as file:
+                data = json.load(file)
+        else:
+            data = []
+
+        segment_data["segment_number"] = len(data) + 1
+        data.append(segment_data)
+
+        with open(json_path, "w") as file:
+            json.dump(data, file, indent=4)
+            
     def display_mask(self, mask):
         if mask is None or mask.sum() == 0:
             return None

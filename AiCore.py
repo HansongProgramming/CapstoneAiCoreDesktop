@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit,QFormLayout, QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QFileDialog, QLabel, QComboBox
+from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit,QFormLayout, QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QFileDialog, QLabel, QComboBox, QListWidget, QListWidgetItem, QVBoxLayout, QMessageBox
 from PyQt5.QtGui import QPixmap, QIcon,QIntValidator,QDoubleValidator,QFont
 import pyvista as pv
 from pyvistaqt import QtInteractor
@@ -17,7 +17,6 @@ import os
 
 if getattr(sys, 'frozen', False):
     import pyi_splash
-
 class MainWindow(QMainWindow):
     dataUpdated = pyqtSignal(str)
     def __init__(self):
@@ -32,6 +31,7 @@ class MainWindow(QMainWindow):
         self.textures = {}
         self.image_paths = {}
         self.segments = []
+        self.previous_data = None  # To track changes in the file
 
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
@@ -68,36 +68,36 @@ class MainWindow(QMainWindow):
         self.add_floor_btn = QPushButton("Floor")
         self.add_floor_btn.clicked.connect(lambda: self.add_plane_with_image("floor"))
         self.add_floor_btn.setIcon(QIcon(self.scaled_pixmap1))
-        self.add_floor_btn.setIconSize(QSize(40, 40))
+        self.add_floor_btn.setIconSize(QSize(20,20))
         self.sidebar_layout.addWidget(self.add_floor_btn)
 
         self.add_right_wall_btn = QPushButton("Right Wall")
         self.add_right_wall_btn.clicked.connect(lambda: self.add_plane_with_image("right"))
         self.add_right_wall_btn.setIcon(QIcon(self.scaled_pixmap2))
-        self.add_right_wall_btn.setIconSize(QSize(40, 40))
+        self.add_right_wall_btn.setIconSize(QSize(20,20))
         self.sidebar_layout.addWidget(self.add_right_wall_btn)
 
         self.add_left_wall_btn = QPushButton("Left Wall")
         self.add_left_wall_btn.clicked.connect(lambda: self.add_plane_with_image("left"))
         self.add_left_wall_btn.setIcon(QIcon(self.scaled_pixmap3))
-        self.add_left_wall_btn.setIconSize(QSize(40, 40))
+        self.add_left_wall_btn.setIconSize(QSize(20,20))
         self.sidebar_layout.addWidget(self.add_left_wall_btn)
 
         self.add_back_wall_btn = QPushButton("Back Wall")
         self.add_back_wall_btn.clicked.connect(lambda: self.add_plane_with_image("back"))
         self.add_back_wall_btn.setIcon(QIcon(self.scaled_pixmap4))
-        self.add_back_wall_btn.setIconSize(QSize(40, 40))
+        self.add_back_wall_btn.setIconSize(QSize(20,20))
         self.sidebar_layout.addWidget(self.add_back_wall_btn)
 
         self.add_front_wall_btn = QPushButton("Front Wall")
         self.add_front_wall_btn.clicked.connect(lambda: self.add_plane_with_image("front"))
         self.add_front_wall_btn.setIcon(QIcon(self.scaled_pixmap5))
-        self.add_front_wall_btn.setIconSize(QSize(40, 40))
+        self.add_front_wall_btn.setIconSize(QSize(20,20))
         self.sidebar_layout.addWidget(self.add_front_wall_btn)
 
         self.add_points_btn = QPushButton("Add Points")
         self.add_points_btn.setIcon(QIcon(self.scaled_pixmap7))
-        self.add_points_btn.setIconSize(QSize(40, 40))
+        self.add_points_btn.setIconSize(QSize(20,20))
         self.add_points_btn.clicked.connect(self.open_image_with_interaction)
         self.sidebar_layout.addWidget(self.add_points_btn)
 
@@ -129,7 +129,7 @@ class MainWindow(QMainWindow):
 
         self.report = QPushButton("Generate Report")
         self.report.setIcon(QIcon(self.scaled_pixmap6))
-        self.report.setIconSize(QSize(40, 40))
+        self.report.setIconSize(QSize(20,20))
         self.report.clicked.connect(self.generateReport)  # Fixed connection
         self.sidebar_layout.addWidget(self.report)
 
@@ -139,12 +139,22 @@ class MainWindow(QMainWindow):
 
         self.sidebar_layout.addStretch()
 
+        self.object_list = QListWidget()
+        self.object_list.itemClicked.connect(self.on_object_selected)
+        self.sidebar_layout.addWidget(self.object_list)
+
+        self.delete_button = QPushButton("Delete Selected")
+        self.delete_button.clicked.connect(self.delete_selected_object)
+        self.sidebar_layout.addWidget(self.delete_button)
+
+        self.load_objects_from_json()
+
 
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")
-        self.toggle_sidebar_btn.setFixedSize(40, 40)
+        self.toggle_sidebar_btn.setFixedSize(20,20)
         self.toggle_sidebar_btn.setIcon(QIcon(self.scaled_pixmap))
-        self.toggle_sidebar_btn.setIconSize(QSize(40, 40))
+        self.toggle_sidebar_btn.setIconSize(QSize(20,20))
         self.toggle_sidebar_btn.clicked.connect(self.toggle_sidebar)
         self.content_layout.addWidget(self.toggle_sidebar_btn)
 
@@ -173,15 +183,51 @@ class MainWindow(QMainWindow):
         self.init_plot()
         if getattr(sys, 'frozen', False):  # If th
             pyi_splash.close()
-
+    def load_objects_from_json(self):
+        self.json_file = "Data.json"
+        try:
+            with open(self.json_file,'r') as file:
+                self.segments = json.load(file)
+                self.update_object_list()
+        except (FileNotFoundError, json.JSONDecodeError):
+            QMessageBox.warning(self, "Error", "Failure in loading of data")
+            self.segments = []
+    def update_object_list(self):
+        self.object_list.clear()
+        for i, segment in enumerate(self.segments):
+            item = QListWidgetItem(f"Object {i+1}: {segment['center']}")
+            self.object_list.addItem(item)
     def get_resource_path(self, relative_path):
         if getattr(sys, 'frozen', False):  # If the script is run from an executable
             base_path = sys._MEIPASS
         else:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, relative_path)
+    def on_object_selected(self, item):
+        index = self.object_list.row(item)
+        selected_segment = self.segments[index]
+        
+        self.init_plot()
+        for i, segment in enumerate(self.segments):
+            color = "green" if i == index else "red"
+            self.generate_3d_line(segment, color)
+    def delete_selected_object(self):
+        selected_items = self.object_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Error", "No object selected for deletion.")
+            return
 
+        for item in selected_items:
+            index = self.object_list.row(item)
+            del self.segments[index]
+            self.update_object_list()
 
+        with open(self.json_file, 'w') as file:
+            json.dump(self.segments, file)
+        self.plotter.clear()
+        self.add_plane_with_image(self.tex)
+        for segment in self.segments:
+            self.generate_3d_line(segment)
     def open_blender_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Simulate", "", "Blender Files (*.blend)")
         if file_path:
@@ -193,18 +239,15 @@ class MainWindow(QMainWindow):
     def load_stylesheet(self, file_path):
         with open(file_path, 'r') as f:
             return f.read()
-
     def init_plot(self):
         self.plotter.clear()
         self.plotter.add_axes()
         self.plotter.background_color = "#0f0e0e"
-
     def toggle_sidebar(self):
         if self.sidebar.isVisible():
             self.sidebar.hide()
         else:
             self.sidebar.show()
-
     def load_image(self):
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Image", "", "Image Files (*.png *.jpg *.jpeg *.bmp)", options=options)
@@ -219,7 +262,6 @@ class MainWindow(QMainWindow):
                 print(f"Failed to load texture: {e}")  # Debug for errors
                 return None, None, None, None
         return None, None, None, None
-
     def add_plane_with_image(self, position):
         width, height, texture, image_path = self.load_image() 
         if texture:
@@ -262,7 +304,6 @@ class MainWindow(QMainWindow):
                 j_resolution=j_resolution, 
             )
             self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
-
     def open_image_with_interaction(self):
         position = self.texture_select.currentText().lower()
         print(f"test: {position}")
@@ -272,13 +313,27 @@ class MainWindow(QMainWindow):
             dialog = SegmentAndMap(image_path, self)
             dialog.dataUpdated.connect(self.update_from_interaction)
             dialog.exec_()
-
     def update_from_interaction(self, json_data):
-        segment = json.loads(json_data)
-        self.segments.append(segment)
-        self.generate_3d_line(segment)
+        # self.plotter.clear()
+        self.json_file = "Data.json"
+        try:
+            with open(self.json_file, 'r') as file:
+                current_data = json.load(file)  # Load data from the JSON file
 
-    def generate_3d_line(self, segment):
+                # If the data has changed, update the list
+                if current_data != self.previous_data:
+                    self.segments = current_data
+                    self.previous_data = current_data  # Store the current data for comparison
+                    print("Data updated from JSON file.")
+                else:
+                    print("No changes in the data.")
+        except FileNotFoundError:
+            print(f"File {self.json_file} not found.")
+        except json.JSONDecodeError:
+            print("Error decoding JSON.")
+        for segment in self.segments:
+            self.generate_3d_line(segment)     
+    def generate_3d_line(self, segment, color="red"):
         self.angle = segment["angle"]
         self.start_point_2d = segment["center"]
         self.spatterCount = segment["spatter_count"]
@@ -360,14 +415,13 @@ class MainWindow(QMainWindow):
 
         # Add visual representation of line
         line = pv.Line(start_point, end_point)
-        self.plotter.add_mesh(line, color="red", line_width=3)
+        self.plotter.add_mesh(line, color=color, line_width=3)
+        self.plotter.update()
 
-        # Update UI elements
         self.stainCount.setText(f"Spatter Count: {self.spatterCount}")
         self.AngleReport.setText(f"Impact Angle: {round(self.angle, 2)}")
         self.HeightReport.setText(f"Point Of Origin: {round(self.Bz, 2)} {self.direction}")
         self.Conclusive.setText(f"Classification: Medium Velocity")
-
     def generateReport(self):
         # Fetch inputs from textboxes
         case_number = self.caseNumber.text()
@@ -452,7 +506,6 @@ class MainWindow(QMainWindow):
             print(f"Report saved as {file_name}")
         except Exception as e:
             print(f"Failed to save report: {e}")
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
