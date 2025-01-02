@@ -149,7 +149,6 @@ class MainWindow(QMainWindow):
 
         self.load_objects_from_json()
 
-
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")
         self.toggle_sidebar_btn.setFixedSize(20,20)
@@ -165,7 +164,6 @@ class MainWindow(QMainWindow):
         self.bottom_bar = QWidget()
         self.bottom_bar_layout = QHBoxLayout(self.bottom_bar)
         self.bottom_bar.setFixedHeight(35)
-        # Move the Information widgets to the bottom bar
         self.InformationHeader = QLabel("Information")
         self.stainCount = QLabel("Spatter Count: 0")
         self.AngleReport = QLabel("Impact Angle: 0")
@@ -181,8 +179,9 @@ class MainWindow(QMainWindow):
 
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.qss")))
         self.init_plot()
-        if getattr(sys, 'frozen', False):  # If th
+        if getattr(sys, 'frozen', False):
             pyi_splash.close()
+
     def load_objects_from_json(self):
         self.json_file = "Data.json"
         try:
@@ -195,7 +194,7 @@ class MainWindow(QMainWindow):
     def update_object_list(self):
         self.object_list.clear()
         for i, segment in enumerate(self.segments):
-            item = QListWidgetItem(f"Object {i+1}: {segment['center']}")
+            item = QListWidgetItem(f"Spatter {i+1}: {segment['angle']}")
             self.object_list.addItem(item)
     def get_resource_path(self, relative_path):
         if getattr(sys, 'frozen', False):  # If the script is run from an executable
@@ -207,7 +206,20 @@ class MainWindow(QMainWindow):
         index = self.object_list.row(item)
         selected_segment = self.segments[index]
         
-        self.init_plot()
+        # Store current orientation
+        orientation = self.texture_select.currentText().lower()
+        
+        # Clear only the lines (meshes) but keep the plane
+        actors_to_remove = []
+        for actor in self.plotter.renderer.actors.values():
+            # Skip the plane actors which have texture
+            if not actor.GetTexture():
+                actors_to_remove.append(actor)
+        
+        for actor in actors_to_remove:
+            self.plotter.renderer.RemoveActor(actor)
+            
+        # Redraw all lines with selected one highlighted
         for i, segment in enumerate(self.segments):
             color = "green" if i == index else "red"
             self.generate_3d_line(segment, color)
@@ -224,8 +236,18 @@ class MainWindow(QMainWindow):
 
         with open(self.json_file, 'w') as file:
             json.dump(self.segments, file)
-        self.plotter.clear()
-        self.add_plane_with_image(self.tex)
+            
+        # Clear only the lines (meshes) but keep the plane
+        actors_to_remove = []
+        for actor in self.plotter.renderer.actors.values():
+            # Skip the plane actors which have texture
+            if not actor.GetTexture():
+                actors_to_remove.append(actor)
+        
+        for actor in actors_to_remove:
+            self.plotter.renderer.RemoveActor(actor)
+            
+        # Redraw all remaining lines
         for segment in self.segments:
             self.generate_3d_line(segment)
     def open_blender_file(self):
@@ -314,16 +336,27 @@ class MainWindow(QMainWindow):
             dialog.dataUpdated.connect(self.update_from_interaction)
             dialog.exec_()
     def update_from_interaction(self, json_data):
-        # self.plotter.clear()
+        # Store current orientation
+        orientation = self.texture_select.currentText().lower()
+        
+        # Clear only the lines (meshes) but keep the plane
+        actors_to_remove = []
+        for actor in self.plotter.renderer.actors.values():
+            # Skip the plane actors which have texture
+            if not actor.GetTexture():
+                actors_to_remove.append(actor)
+        
+        for actor in actors_to_remove:
+            self.plotter.renderer.RemoveActor(actor)
+        
+        # Update the JSON data
         self.json_file = "Data.json"
         try:
             with open(self.json_file, 'r') as file:
-                current_data = json.load(file)  # Load data from the JSON file
-
-                # If the data has changed, update the list
+                current_data = json.load(file)
                 if current_data != self.previous_data:
                     self.segments = current_data
-                    self.previous_data = current_data  # Store the current data for comparison
+                    self.previous_data = current_data
                     print("Data updated from JSON file.")
                 else:
                     print("No changes in the data.")
@@ -331,9 +364,12 @@ class MainWindow(QMainWindow):
             print(f"File {self.json_file} not found.")
         except json.JSONDecodeError:
             print("Error decoding JSON.")
+            
+        # Redraw all lines
         for segment in self.segments:
-            self.generate_3d_line(segment)     
+            self.generate_3d_line(segment)
     def generate_3d_line(self, segment, color="red"):
+        self.update_object_list()
         self.angle = segment["angle"]
         self.start_point_2d = segment["center"]
         self.spatterCount = segment["spatter_count"]

@@ -1,1 +1,117 @@
-[{"center": [542, 348], "angle": 43.64092447929662, "line_endpoints": {"positive_direction": [1145, 981], "negative_direction": [210, 0]}, "spatter_count": 1, "segment_number": 1}, {"center": [703, 771], "angle": 31.31070863180917, "line_endpoints": {"positive_direction": [830, 980], "negative_direction": [235, 2]}, "spatter_count": 3, "segment_number": 3}]
+<<<<<<< HEAD
+[
+    {
+        "center": [
+            703,
+            771
+        ],
+        "angle": 31.31070863180917,
+        "line_endpoints": {
+            "positive_direction": [
+                830,
+                980
+            ],
+            "negative_direction": [
+                235,
+                2
+            ]
+        },
+        "spatter_count": 3,
+        "segment_number": 3
+    },
+    {
+        "center": [
+            390,
+            917
+        ],
+        "angle": 15.032775699551962,
+        "line_endpoints": {
+            "positive_direction": [
+                406,
+                979
+            ],
+            "negative_direction": [
+                144,
+                4
+            ]
+        },
+        "spatter_count": 1,
+        "segment_number": 3
+    },
+    {
+        "center": [
+            390,
+            916
+        ],
+        "angle": 14.619068714843195,
+        "line_endpoints": {
+            "positive_direction": [
+                406,
+                978
+            ],
+            "negative_direction": [
+                151,
+                1
+            ]
+        },
+        "spatter_count": 1,
+        "segment_number": 3
+    },
+    {
+        "center": [
+            1131,
+            461
+        ],
+        "angle": 57.98533812325065,
+        "line_endpoints": {
+            "positive_direction": [
+                1309,
+                572
+            ],
+            "negative_direction": [
+                397,
+                2
+            ]
+        },
+        "spatter_count": 1,
+        "segment_number": 4
+    },
+    {
+        "center": [
+            1035,
+            905
+        ],
+        "angle": 40.19411328880099,
+        "line_endpoints": {
+            "positive_direction": [
+                1099,
+                981
+            ],
+            "negative_direction": [
+                273,
+                3
+            ]
+        },
+        "spatter_count": 1,
+        "segment_number": 5
+    },
+    {
+        "center": [
+            761,
+            360
+        ],
+        "angle": 64.01100367461349,
+        "line_endpoints": {
+            "positive_direction": [
+                1309,
+                627
+            ],
+            "negative_direction": [
+                23,
+                0
+            ]
+        },
+        "spatter_count": 1,
+        "segment_number": 6
+    }
+]
