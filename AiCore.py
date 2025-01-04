@@ -1,27 +1,115 @@
-import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit,QFormLayout, QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QFileDialog, QLabel, QComboBox, QListWidget, QListWidgetItem, QVBoxLayout, QMessageBox
-from PyQt5.QtGui import QPixmap, QIcon,QIntValidator,QDoubleValidator,QFont
-import pyvista as pv
-from pyvistaqt import QtInteractor
-from PIL import Image
-from PyQt5.QtCore import Qt, pyqtSignal, QSize
-import json
-import numpy as np
-from SegmentAndMap import SegmentAndMap 
-import math
-from docx import Document
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from datetime import datetime
-import subprocess
-import os
+from imports import *
 
 if getattr(sys, 'frozen', False):
     import pyi_splash
+class TitleBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.layout)
+        
+        # Title label
+        self.title = QLabel("AiCore x SpatterSense")
+        self.title.setStyleSheet("color: white; font-size: 12px;")
+        
+        # File button
+        self.file_btn = QPushButton("File")
+        self.file_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                color: white;
+                border: none;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                background: rgba(255,255,255,0.1);
+            }
+        """)
+        
+        # Window controls
+        self.minimize_btn = QPushButton("—")
+        self.maximize_btn = QPushButton("[]")
+        self.close_btn = QPushButton("X")
+        
+        for btn in (self.minimize_btn, self.maximize_btn, self.close_btn):
+            btn.setFixedSize(50, 30)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    color: white;
+                    border: none;
+                    text-align: center;
+                }
+                QPushButton:hover {
+                    background: rgba(255,255,255,0.1);
+                }
+            """)
+        
+        self.close_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                color: white;
+                border: none;
+            }
+            QPushButton:hover {
+                background: #e81123;
+                color: white;
+            }
+        """)
+        
+        # Add widgets to layout
+        self.layout.addWidget(self.file_btn)
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.minimize_btn)
+        self.layout.addWidget(self.maximize_btn)
+        self.layout.addWidget(self.close_btn)
+        
+        # Connect buttons
+        self.minimize_btn.clicked.connect(self.parent.showMinimized)
+        self.maximize_btn.clicked.connect(self.toggle_maximize)
+        self.close_btn.clicked.connect(self.parent.close)
+        
+        self.start = QPoint(0, 0)
+        self.pressing = False
+        
+    def toggle_maximize(self):
+        if self.parent.isMaximized():
+            self.parent.showNormal()
+        else:
+            self.parent.showMaximized()
+            
+    def mousePressEvent(self, event):
+        self.start = self.mapToGlobal(event.pos())
+        self.pressing = True
+        
+    def mouseMoveEvent(self, event):
+        if self.pressing:
+            if self.parent.isMaximized():
+                self.parent.showNormal()
+            
+            end = self.mapToGlobal(event.pos())
+            movement = end - self.start
+            
+            self.parent.setGeometry(
+                self.parent.pos().x() + movement.x(),
+                self.parent.pos().y() + movement.y(),
+                self.parent.width(),
+                self.parent.height()
+            )
+            self.start = end
+            
+    def mouseReleaseEvent(self, event):
+        self.pressing = False
+
 class MainWindow(QMainWindow):
     dataUpdated = pyqtSignal(str)
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AiCore x SpatterSense")
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.title_bar = TitleBar(self)
+
         self.setGeometry(100, 100, 1200, 800)
 
         self.label = QLabel("AI Core Viewer", self)
@@ -31,12 +119,13 @@ class MainWindow(QMainWindow):
         self.textures = {}
         self.image_paths = {}
         self.segments = []
-        self.previous_data = None  # To track changes in the file
+        self.previous_data = None  
 
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
 
         self.main_layout = QVBoxLayout(self.main_widget)
+        self.main_layout.addWidget(self.title_bar)
 
         self.content_layout = QHBoxLayout()
 
@@ -44,7 +133,7 @@ class MainWindow(QMainWindow):
         self.content_layout.addWidget(self.plotter.interactor)
 
         self.sidebar = QWidget()
-        self.sidebar.setFixedWidth(250)
+        self.sidebar.setFixedWidth(330)
         self.sidebar_layout = QVBoxLayout(self.sidebar)
 
         self.sidebarIcon = QPixmap(self.get_resource_path("images/sidebar.png"))
@@ -177,7 +266,7 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addWidget(self.bottom_bar)
 
-        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.qss")))
+        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         self.init_plot()
         if getattr(sys, 'frozen', False):
             pyi_splash.close()
@@ -264,7 +353,7 @@ class MainWindow(QMainWindow):
     def init_plot(self):
         self.plotter.clear()
         self.plotter.add_axes()
-        self.plotter.background_color = "#0f0e0e"
+        self.plotter.background_color = "#3f3f3f"
     def toggle_sidebar(self):
         if self.sidebar.isVisible():
             self.sidebar.hide()
