@@ -2,21 +2,14 @@ from imports import *
 
 if getattr(sys, 'frozen', False):
     import pyi_splash
-class TitleBar(QWidget):
+
+global canEnable
+canEnable = False
+
+class MenuButton(QPushButton):
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent = parent
-        self.layout = QHBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.layout)
-        
-        # Title label
-        self.title = QLabel("AiCore x SpatterSense")
-        self.title.setStyleSheet("color: white; font-size: 12px;")
-        
-        # File button
-        self.file_btn = QPushButton("File")
-        self.file_btn.setStyleSheet("""
+        super().__init__("File", parent)
+        self.setStyleSheet("""
             QPushButton {
                 background: transparent;
                 color: white;
@@ -28,10 +21,90 @@ class TitleBar(QWidget):
             }
         """)
         
+        # Create menu
+        self.menu = QMenu(self)
+        self.menu.setStyleSheet("""
+            QMenu {
+                background-color: #2d2d2d;
+                color: white;
+                border: 1px solid #3d3d3d;
+            }
+            QMenu::item:selected {
+                background-color: #3d3d3d;
+            }
+        """)
+        
+        # Add menu items
+        self.menu.addAction("New")
+        self.menu.addAction("Open")
+        self.menu.addAction("Save")
+        self.menu.addSeparator()
+        self.menu.addAction("Exit")
+        
+        # Set the menu
+        self.setMenu(self.menu)
+        
+        # Connect actions
+        self.menu.triggered.connect(self.handleMenuAction)
+
+    def handleMenuAction(self, action):
+        global canEnable
+        if action.text() == "Exit":
+            self.window().close()
+        elif action.text() == "New":
+            # Prompt user to select a directory
+            folder_path = QFileDialog.getExistingDirectory(self, "Select Directory for New Case")
+            if folder_path:
+                # Create a new folder and `Data.json`
+                case_folder = os.path.join(folder_path, "NewCase")
+                os.makedirs(case_folder, exist_ok=True)
+                data_file = os.path.join(case_folder, "Data.json")
+                with open(data_file, 'w') as json_file:
+                    json.dump({}, json_file)  # Create an empty JSON
+
+                # Notify the MainWindow to enable interactions
+                canEnable = True
+
+class TitleBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.layout)
+        # Title label
+        self.title = QLabel("AiCore x SpatterSense")
+        self.title.setStyleSheet("color: white; font-size: 12px;")
+
+        self.AiCoreLabel = QLabel()
+        self.AiCoreIcon = QPixmap(self.get_resource_path("images/AiCore.png"))
+        self.scaled_pixmap = self.AiCoreIcon.scaled(20, 20, aspectRatioMode=Qt.KeepAspectRatio)
+        self.AiCoreLabel.setPixmap(self.scaled_pixmap)
+        # File button
+        self.file_btn = MenuButton(self)
+        self.file_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                color: white;
+                border: none;
+            }
+            QPushButton:hover {
+                background: rgba(255,255,255,0.1);
+            }
+        """)
+        self.minimizeIcon = QPixmap(self.get_resource_path("images/minimize.png"))
+        self.scaled_pixmap = self.minimizeIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        self.maximizeIcon = QPixmap(self.get_resource_path("images/maximize.png"))
+        self.scaled_pixmap = self.maximizeIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        self.exitIcon = QPixmap(self.get_resource_path("images/exit.png"))
+        self.scaled_pixmap = self.exitIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         # Window controls
-        self.minimize_btn = QPushButton("—")
-        self.maximize_btn = QPushButton("[]")
-        self.close_btn = QPushButton("X")
+        self.minimize_btn = QPushButton()
+        self.maximize_btn = QPushButton()
+        self.close_btn = QPushButton()
+        self.minimize_btn.setIcon(QIcon(self.minimizeIcon))
+        self.maximize_btn.setIcon(QIcon(self.maximizeIcon)) 
+        self.close_btn.setIcon(QIcon(self.exitIcon))
         
         for btn in (self.minimize_btn, self.maximize_btn, self.close_btn):
             btn.setFixedSize(50, 30)
@@ -52,14 +125,16 @@ class TitleBar(QWidget):
                 background: transparent;
                 color: white;
                 border: none;
+                text-align: center;
             }
             QPushButton:hover {
-                background: #e81123;
+                background: #c83f61;
                 color: white;
             }
         """)
         
         # Add widgets to layout
+        self.layout.addWidget(self.AiCoreLabel)
         self.layout.addWidget(self.file_btn)
         self.layout.addStretch(1)
         self.layout.addWidget(self.minimize_btn)
@@ -103,11 +178,20 @@ class TitleBar(QWidget):
     def mouseReleaseEvent(self, event):
         self.pressing = False
 
+    def get_resource_path(self, relative_path):
+        if getattr(sys, 'frozen', False):  # If the script is run from an executable
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, relative_path)
+
 class MainWindow(QMainWindow):
     dataUpdated = pyqtSignal(str)
     def __init__(self):
+        global canEnable
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setWindowTitle("AiCore x SpatterSense")
         self.title_bar = TitleBar(self)
 
         self.setGeometry(100, 100, 1200, 800)
@@ -266,10 +350,22 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addWidget(self.bottom_bar)
 
+        self.add_floor_btn.setEnabled(canEnable)
+        self.add_right_wall_btn.setEnabled(canEnable)
+        self.add_left_wall_btn.setEnabled(canEnable)
+        self.add_back_wall_btn.setEnabled(canEnable)
+        self.add_front_wall_btn.setEnabled(canEnable)
+        self.add_points_btn.setEnabled(canEnable)
+        self.simulate.setEnabled(canEnable)
+        self.report.setEnabled(canEnable)
+        self.delete_button.setEnabled(canEnable)
+        self.object_list.setEnabled(canEnable)
+
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         self.init_plot()
         if getattr(sys, 'frozen', False):
             pyi_splash.close()
+    
 
     def load_objects_from_json(self):
         self.json_file = "Data.json"
@@ -312,6 +408,7 @@ class MainWindow(QMainWindow):
         for i, segment in enumerate(self.segments):
             color = "green" if i == index else "red"
             self.generate_3d_line(segment, color)
+
     def delete_selected_object(self):
         selected_items = self.object_list.selectedItems()
         if not selected_items:
@@ -339,6 +436,7 @@ class MainWindow(QMainWindow):
         # Redraw all remaining lines
         for segment in self.segments:
             self.generate_3d_line(segment)
+
     def open_blender_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Simulate", "", "Blender Files (*.blend)")
         if file_path:
@@ -346,19 +444,23 @@ class MainWindow(QMainWindow):
             try:
                 subprocess.run([blender_path, file_path])
             except Exception as e:
-                print(f"Error opening Blender file: {e}")
+                QMessageBox.warning(self, "Error", f"Error opening Blender file: {e}")
+
     def load_stylesheet(self, file_path):
         with open(file_path, 'r') as f:
             return f.read()
+    
     def init_plot(self):
         self.plotter.clear()
         self.plotter.add_axes()
         self.plotter.background_color = "#3f3f3f"
+    
     def toggle_sidebar(self):
         if self.sidebar.isVisible():
             self.sidebar.hide()
         else:
             self.sidebar.show()
+    
     def load_image(self):
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Image", "", "Image Files (*.png *.jpg *.jpeg *.bmp)", options=options)
@@ -370,9 +472,10 @@ class MainWindow(QMainWindow):
                 print(f"Loaded texture from: {file_path}")  # Debug message
                 return width, height, texture, file_path
             except Exception as e:
-                print(f"Failed to load texture: {e}")  # Debug for errors
+                QMessageBox.warning(self, "Error", f"Failed to load texture: {e}")
                 return None, None, None, None
         return None, None, None, None
+    
     def add_plane_with_image(self, position):
         width, height, texture, image_path = self.load_image() 
         if texture:
@@ -415,6 +518,7 @@ class MainWindow(QMainWindow):
                 j_resolution=j_resolution, 
             )
             self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
+    
     def open_image_with_interaction(self):
         position = self.texture_select.currentText().lower()
         print(f"test: {position}")
@@ -424,6 +528,9 @@ class MainWindow(QMainWindow):
             dialog = SegmentAndMap(image_path, self)
             dialog.dataUpdated.connect(self.update_from_interaction)
             dialog.exec_()
+        else:
+            QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
+    
     def update_from_interaction(self, json_data):
         # Store current orientation
         orientation = self.texture_select.currentText().lower()
@@ -450,13 +557,14 @@ class MainWindow(QMainWindow):
                 else:
                     print("No changes in the data.")
         except FileNotFoundError:
-            print(f"File {self.json_file} not found.")
+            QMessageBox.warning(self, "Error", f"File {self.json_file} not found.")
         except json.JSONDecodeError:
-            print("Error decoding JSON.")
+            QMessageBox.warning(self, "Error", "Error decoding JSON.")
             
         # Redraw all lines
         for segment in self.segments:
             self.generate_3d_line(segment)
+    
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
         self.angle = segment["angle"]
@@ -547,6 +655,7 @@ class MainWindow(QMainWindow):
         self.AngleReport.setText(f"Impact Angle: {round(self.angle, 2)}")
         self.HeightReport.setText(f"Point Of Origin: {round(self.Bz, 2)} {self.direction}")
         self.Conclusive.setText(f"Classification: Medium Velocity")
+    
     def generateReport(self):
         # Fetch inputs from textboxes
         case_number = self.caseNumber.text()
@@ -630,7 +739,8 @@ class MainWindow(QMainWindow):
             doc.save(file_name)
             print(f"Report saved as {file_name}")
         except Exception as e:
-            print(f"Failed to save report: {e}")
+            QMessageBox.warning(self, "Error", f"Failed to save report: {e}")
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()

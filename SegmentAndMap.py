@@ -71,7 +71,7 @@ class SegmentAndMap(QDialog):
         self.graphics_view.mousePressEvent = self.mouse_press_event
         self.graphics_view.mouseReleaseEvent = self.mouse_release_event
         self.graphics_view.mouseMoveEvent = self.mouse_move_event
-        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.qss")))
+        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
 
     def get_resource_path(self, relative_path):
         if getattr(sys, 'frozen', False):  # If the script is run from an executable

@@ -26,9 +26,14 @@ QLabel {
     color: white;
 }
 QComboBox {
-    color: #c83f61;
+    color: #ffffff;
     font-size: 12px;
-    border-radius: 12px
+    border-radius: 12px;
+}
+QComboBox QAbstractItemView{
+    color: #ffffff;
+    font-size: 12px;
+    border-radius: 12px;
 }
 
 QLineEdit{
