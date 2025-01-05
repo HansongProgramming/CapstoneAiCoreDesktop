@@ -5,10 +5,13 @@ if getattr(sys, 'frozen', False):
 
 global canEnable
 canEnable = False
+global active_folder
+active_folder = None
 
 class MenuButton(QPushButton):
-    def __init__(self, parent=None):
+    def __init__(self,main_window, parent=None):
         super().__init__("File", parent)
+        self.main_window = main_window
         self.setStyleSheet("""
             QPushButton {
                 background: transparent;
@@ -34,36 +37,33 @@ class MenuButton(QPushButton):
             }
         """)
         
-        # Add menu items
         self.menu.addAction("New")
         self.menu.addAction("Open")
         self.menu.addAction("Save")
         self.menu.addSeparator()
         self.menu.addAction("Exit")
         
-        # Set the menu
         self.setMenu(self.menu)
         
-        # Connect actions
         self.menu.triggered.connect(self.handleMenuAction)
 
     def handleMenuAction(self, action):
         global canEnable
+        global active_folder
         if action.text() == "Exit":
             self.window().close()
         elif action.text() == "New":
-            # Prompt user to select a directory
             folder_path = QFileDialog.getExistingDirectory(self, "Select Directory for New Case")
             if folder_path:
-                # Create a new folder and `Data.json`
-                case_folder = os.path.join(folder_path, "NewCase")
+                folder_name, ok = QInputDialog.getText(self, "Folder Name", "Enter a name for the new case folder:")
+                case_folder = os.path.join(folder_path, folder_name)
                 os.makedirs(case_folder, exist_ok=True)
                 data_file = os.path.join(case_folder, "Data.json")
                 with open(data_file, 'w') as json_file:
-                    json.dump({}, json_file)  # Create an empty JSON
-
-                # Notify the MainWindow to enable interactions
+                    json.dump([], json_file)  
                 canEnable = True
+                active_folder = case_folder 
+                self.main_window.enableUI(canEnable)
 
 class TitleBar(QWidget):
     def __init__(self, parent=None):
@@ -81,7 +81,7 @@ class TitleBar(QWidget):
         self.scaled_pixmap = self.AiCoreIcon.scaled(20, 20, aspectRatioMode=Qt.KeepAspectRatio)
         self.AiCoreLabel.setPixmap(self.scaled_pixmap)
         # File button
-        self.file_btn = MenuButton(self)
+        self.file_btn = MenuButton(parent)
         self.file_btn.setStyleSheet("""
             QPushButton {
                 background: transparent;
@@ -320,8 +320,6 @@ class MainWindow(QMainWindow):
         self.delete_button.clicked.connect(self.delete_selected_object)
         self.sidebar_layout.addWidget(self.delete_button)
 
-        self.load_objects_from_json()
-
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")
         self.toggle_sidebar_btn.setFixedSize(20,20)
@@ -350,25 +348,34 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addWidget(self.bottom_bar)
 
-        self.add_floor_btn.setEnabled(canEnable)
-        self.add_right_wall_btn.setEnabled(canEnable)
-        self.add_left_wall_btn.setEnabled(canEnable)
-        self.add_back_wall_btn.setEnabled(canEnable)
-        self.add_front_wall_btn.setEnabled(canEnable)
-        self.add_points_btn.setEnabled(canEnable)
-        self.simulate.setEnabled(canEnable)
-        self.report.setEnabled(canEnable)
-        self.delete_button.setEnabled(canEnable)
-        self.object_list.setEnabled(canEnable)
+        self.enableUI(canEnable)
 
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         self.init_plot()
         if getattr(sys, 'frozen', False):
             pyi_splash.close()
-    
+
+    def enableUI(self, enabled):
+        print("UI Enabled", enabled)
+        self.add_floor_btn.setEnabled(enabled)
+        self.add_right_wall_btn.setEnabled(enabled)
+        self.add_left_wall_btn.setEnabled(enabled)
+        self.add_back_wall_btn.setEnabled(enabled)
+        self.add_front_wall_btn.setEnabled(enabled)
+        self.add_points_btn.setEnabled(enabled)
+        self.simulate.setEnabled(enabled)
+        self.report.setEnabled(enabled)
+        self.delete_button.setEnabled(enabled)
+        self.object_list.setEnabled(enabled)
 
     def load_objects_from_json(self):
-        self.json_file = "Data.json"
+        global active_folder
+        if not active_folder:
+            QMessageBox.warning(self, "Error", "No active folder selected.")
+
+        self.path = os.path.join(active_folder, "Data.json")
+        print(self.path)
+        self.json_file = str(self.path)
         try:
             with open(self.json_file,'r') as file:
                 self.segments = json.load(file)
@@ -376,13 +383,14 @@ class MainWindow(QMainWindow):
         except (FileNotFoundError, json.JSONDecodeError):
             QMessageBox.warning(self, "Error", "Failure in loading of data")
             self.segments = []
+
     def update_object_list(self):
         self.object_list.clear()
         for i, segment in enumerate(self.segments):
             item = QListWidgetItem(f"Spatter {i+1}: {segment['angle']}")
             self.object_list.addItem(item)
     def get_resource_path(self, relative_path):
-        if getattr(sys, 'frozen', False):  # If the script is run from an executable
+        if getattr(sys, 'frozen', False): 
             base_path = sys._MEIPASS
         else:
             base_path = os.path.abspath(".")
@@ -391,13 +399,10 @@ class MainWindow(QMainWindow):
         index = self.object_list.row(item)
         selected_segment = self.segments[index]
         
-        # Store current orientation
         orientation = self.texture_select.currentText().lower()
         
-        # Clear only the lines (meshes) but keep the plane
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
-            # Skip the plane actors which have texture
             if not actor.GetTexture():
                 actors_to_remove.append(actor)
         
@@ -423,24 +428,21 @@ class MainWindow(QMainWindow):
         with open(self.json_file, 'w') as file:
             json.dump(self.segments, file)
             
-        # Clear only the lines (meshes) but keep the plane
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
-            # Skip the plane actors which have texture
             if not actor.GetTexture():
                 actors_to_remove.append(actor)
         
         for actor in actors_to_remove:
             self.plotter.renderer.RemoveActor(actor)
             
-        # Redraw all remaining lines
         for segment in self.segments:
             self.generate_3d_line(segment)
 
     def open_blender_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Simulate", "", "Blender Files (*.blend)")
         if file_path:
-            blender_path = r"C:\Users\flore\Downloads\blender-3.0.0-windows-x64\blender-3.0.0-windows-x64\blender.exe"  # Update with your Blender executable path
+            blender_path = r"C:\Users\flore\Downloads\blender-3.0.0-windows-x64\blender-3.0.0-windows-x64\blender.exe"
             try:
                 subprocess.run([blender_path, file_path])
             except Exception as e:
@@ -520,18 +522,23 @@ class MainWindow(QMainWindow):
             self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
     
     def open_image_with_interaction(self):
+        global active_folder
         position = self.texture_select.currentText().lower()
         print(f"test: {position}")
         print(f"Loaded texture for {position}: {self.image_paths.get(position)}")
         image_path = self.image_paths.get(position)
+        self.path = os.path.join(active_folder, "Data.json")
+        self.json_file = str(self.path)
+        jsonpath = self.json_file
         if image_path:
-            dialog = SegmentAndMap(image_path, self)
+            dialog = SegmentAndMap(image_path,jsonpath, self)
             dialog.dataUpdated.connect(self.update_from_interaction)
             dialog.exec_()
         else:
             QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
     
     def update_from_interaction(self, json_data):
+        self.load_objects_from_json()
         # Store current orientation
         orientation = self.texture_select.currentText().lower()
         
@@ -546,7 +553,7 @@ class MainWindow(QMainWindow):
             self.plotter.renderer.RemoveActor(actor)
         
         # Update the JSON data
-        self.json_file = "Data.json"
+        self.json_file
         try:
             with open(self.json_file, 'r') as file:
                 current_data = json.load(file)

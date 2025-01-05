@@ -27,3 +27,4 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QPushButton, QMenu, QAction
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QSize
+from PyQt5.QtWidgets import QFileDialog, QInputDialog

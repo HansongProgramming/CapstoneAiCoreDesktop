@@ -12,8 +12,9 @@ import sys
 class SegmentAndMap(QDialog):
     dataUpdated = pyqtSignal(str)  
 
-    def __init__(self, image_path, parent=None):
+    def __init__(self, image_path, jsonPath ,parent=None):
         super().__init__(parent)
+        self.json_file = jsonPath
         self.setWindowTitle("Image Interaction")
         self.image_path = image_path
         self.model_path = os.path.abspath(self.get_resource_path('models/sam_vit_b_01ec64.pth'))
@@ -134,9 +135,9 @@ class SegmentAndMap(QDialog):
                 self.dataUpdated.emit(json_data)
 
     def update_json(self, segment_data):
-        json_path = "Data.json"
-        if os.path.exists(json_path):
-            with open(json_path, "r") as file:
+        self.json_file
+        if os.path.exists(self.json_file):
+            with open(self.json_file, "r") as file:
                 data = json.load(file)
         else:
             data = []
@@ -144,7 +145,7 @@ class SegmentAndMap(QDialog):
         segment_data["segment_number"] = len(data) + 1
         data.append(segment_data)
 
-        with open(json_path, "w") as file:
+        with open(self.json_file, "w") as file:
             json.dump(data, file, indent=4)
             
     def display_mask(self, mask):
