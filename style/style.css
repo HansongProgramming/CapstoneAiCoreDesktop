@@ -12,6 +12,7 @@ QPushButton {
     color: #ffffff;
     border-radius: 5px;
     font-size: 11px;
+    font-family: arial;
     text-align: left;
 }
 
@@ -22,6 +23,7 @@ QPushButton:hover {
 }
 
 QLabel {
+    font-family: arial black;
     font-size: 12px;
     color: white;
 }
