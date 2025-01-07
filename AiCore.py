@@ -37,9 +37,9 @@ class MenuButton(QPushButton):
             }
         """)
         
-        self.menu.addAction("New")
+        
+        self.menu.addAction("New Case")
         self.menu.addAction("Open")
-        self.menu.addAction("Save")
         self.menu.addSeparator()
         self.menu.addAction("Exit")
         
@@ -52,7 +52,7 @@ class MenuButton(QPushButton):
         global active_folder
         if action.text() == "Exit":
             self.window().close()
-        elif action.text() == "New":
+        elif action.text() == "New Case":
             folder_path = QFileDialog.getExistingDirectory(self, "Select Directory for New Case")
             if folder_path:
                 folder_name, ok = QInputDialog.getText(self, "Folder Name", "Enter a name for the new case folder:")
@@ -87,6 +87,7 @@ class TitleBar(QWidget):
                 background: transparent;
                 color: white;
                 border: none;
+                width: 35px;
             }
             QPushButton:hover {
                 background: rgba(255,255,255,0.1);
@@ -238,6 +239,7 @@ class MainWindow(QMainWindow):
         self.scaled_pixmap7 = self.selectspatter.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
 
         self.Header3D = QLabel("3D Assets")
+        self.sidebar_layout.addWidget(self.Header3D)
         self.add_floor_btn = QPushButton("Floor")
         self.add_floor_btn.clicked.connect(lambda: self.add_plane_with_image("floor"))
         self.add_floor_btn.setIcon(QIcon(self.scaled_pixmap1))
@@ -274,6 +276,9 @@ class MainWindow(QMainWindow):
         self.add_points_btn.clicked.connect(self.open_image_with_interaction)
         self.sidebar_layout.addWidget(self.add_points_btn)
 
+        self.splitter = QSplitter(Qt.Horizontal)
+        self.sidebar_layout.addWidget(self.splitter)
+        
         self.texture_select = QComboBox()
         self.texture_select.addItem("Floor")
         self.texture_select.addItem("Right")
@@ -395,12 +400,48 @@ class MainWindow(QMainWindow):
         else:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, relative_path)
+    
     def on_object_selected(self, item):
         index = self.object_list.row(item)
         selected_segment = self.segments[index]
         
-        orientation = self.texture_select.currentText().lower()
+        # Update information labels with selected spatter data
+        self.AngleReport.setText(f"Impact Angle: {round(selected_segment['angle'], 2)}°")
+
+        # Calculate direction and height for selected spatter
+        start = selected_segment["center"]
+        end = selected_segment["line_endpoints"]["negative_direction"]
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        distance = math.sqrt(dx*dx + dy*dy)
+        bz = distance * math.sin(math.radians(selected_segment["angle"]))
         
+        # Calculate direction
+        angle = math.degrees(math.atan2(dy, dx))
+        if angle < 0:
+            angle += 360
+        
+        # Map angle to direction
+        direction = "East"
+        if 22.5 <= angle < 67.5:
+            direction = "Northeast"
+        elif 67.5 <= angle < 112.5:
+            direction = "North"
+        elif 112.5 <= angle < 157.5:
+            direction = "Northwest"
+        elif 157.5 <= angle < 202.5:
+            direction = "West"
+        elif 202.5 <= angle < 247.5:
+            direction = "Southwest"
+        elif 247.5 <= angle < 292.5:
+            direction = "South"
+        elif 292.5 <= angle < 337.5:
+            direction = "Southeast"
+        
+        self.HeightReport.setText(f"Point of Origin: {round(bz, 2)} mm {direction}")
+        
+        # Highlight selected spatter
+        orientation = self.texture_select.currentText().lower()
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
             if not actor.GetTexture():
@@ -409,10 +450,10 @@ class MainWindow(QMainWindow):
         for actor in actors_to_remove:
             self.plotter.renderer.RemoveActor(actor)
             
-        # Redraw all lines with selected one highlighted
         for i, segment in enumerate(self.segments):
             color = "green" if i == index else "red"
             self.generate_3d_line(segment, color)
+
 
     def delete_selected_object(self):
         selected_items = self.object_list.selectedItems()
@@ -539,27 +580,74 @@ class MainWindow(QMainWindow):
     
     def update_from_interaction(self, json_data):
         self.load_objects_from_json()
-        # Store current orientation
-        orientation = self.texture_select.currentText().lower()
         
-        # Clear only the lines (meshes) but keep the plane
+        # Clear existing lines
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
-            # Skip the plane actors which have texture
             if not actor.GetTexture():
                 actors_to_remove.append(actor)
         
         for actor in actors_to_remove:
             self.plotter.renderer.RemoveActor(actor)
         
-        # Update the JSON data
-        self.json_file
         try:
             with open(self.json_file, 'r') as file:
                 current_data = json.load(file)
                 if current_data != self.previous_data:
                     self.segments = current_data
                     self.previous_data = current_data
+                    
+                    # Update information labels
+                    total_spatters = sum(segment["spatter_count"] for segment in self.segments)
+                    avg_angle = sum(segment["angle"] for segment in self.segments) / len(self.segments) if self.segments else 0
+                    
+                    self.stainCount.setText(f"Spatter Count: {total_spatters}")
+                    self.AngleReport.setText(f"Average Impact Angle: {round(avg_angle, 2)}°")
+                    
+                    # Calculate average point of origin
+                    avg_bz = 0
+                    directions = []
+                    for segment in self.segments:
+                        # Calculate Bz for each segment
+                        start = segment["center"]
+                        end = segment["line_endpoints"]["negative_direction"]
+                        dx = end[0] - start[0]
+                        dy = end[1] - start[1]
+                        distance = math.sqrt(dx*dx + dy*dy)
+                        bz = distance * math.sin(math.radians(segment["angle"]))
+                        avg_bz += bz
+                        
+                        # Get direction
+                        angle = math.degrees(math.atan2(dy, dx))
+                        if angle < 0:
+                            angle += 360
+                        
+                        # Map angle to direction
+                        if 22.5 <= angle < 67.5:
+                            directions.append("Northeast")
+                        elif 67.5 <= angle < 112.5:
+                            directions.append("North")
+                        elif 112.5 <= angle < 157.5:
+                            directions.append("Northwest")
+                        elif 157.5 <= angle < 202.5:
+                            directions.append("West")
+                        elif 202.5 <= angle < 247.5:
+                            directions.append("Southwest")
+                        elif 247.5 <= angle < 292.5:
+                            directions.append("South")
+                        elif 292.5 <= angle < 337.5:
+                            directions.append("Southeast")
+                        else:
+                            directions.append("East")
+                    
+                    avg_bz = avg_bz / len(self.segments) if self.segments else 0
+                    
+                    # Get most common direction
+                    from collections import Counter
+                    most_common_direction = Counter(directions).most_common(1)[0][0] if directions else "Unknown"
+                    
+                    self.HeightReport.setText(f"Average Point of Origin: {round(avg_bz, 2)} mm {most_common_direction}")
+                    
                     print("Data updated from JSON file.")
                 else:
                     print("No changes in the data.")
@@ -571,7 +659,7 @@ class MainWindow(QMainWindow):
         # Redraw all lines
         for segment in self.segments:
             self.generate_3d_line(segment)
-    
+
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
         self.angle = segment["angle"]
@@ -658,9 +746,6 @@ class MainWindow(QMainWindow):
         self.plotter.add_mesh(line, color=color, line_width=3)
         self.plotter.update()
 
-        self.stainCount.setText(f"Spatter Count: {self.spatterCount}")
-        self.AngleReport.setText(f"Impact Angle: {round(self.angle, 2)}")
-        self.HeightReport.setText(f"Point Of Origin: {round(self.Bz, 2)} {self.direction}")
         self.Conclusive.setText(f"Classification: Medium Velocity")
     
     def generateReport(self):
@@ -675,7 +760,7 @@ class MainWindow(QMainWindow):
 
         file_name = QFileDialog.getSaveFileName(self, "Save Report", "", "Word Document (*.docx)")[0]
         if not file_name:
-            return  # Cancel if no file selected
+            return  
 
         doc = Document()
 
