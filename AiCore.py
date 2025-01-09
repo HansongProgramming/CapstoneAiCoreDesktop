@@ -24,7 +24,6 @@ class MenuButton(QPushButton):
             }
         """)
         
-        # Create menu
         self.menu = QMenu(self)
         self.menu.setStyleSheet("""
             QMenu {
@@ -72,7 +71,6 @@ class TitleBar(QWidget):
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
-        # Title label
         self.title = QLabel("AiCore x SpatterSense")
         self.title.setStyleSheet("color: white; font-size: 12px;")
 
@@ -80,7 +78,6 @@ class TitleBar(QWidget):
         self.AiCoreIcon = QPixmap(self.get_resource_path("images/AiCore.png"))
         self.scaled_pixmap = self.AiCoreIcon.scaled(20, 20, aspectRatioMode=Qt.KeepAspectRatio)
         self.AiCoreLabel.setPixmap(self.scaled_pixmap)
-        # File button
         self.file_btn = MenuButton(parent)
         self.file_btn.setStyleSheet("""
             QPushButton {
@@ -99,7 +96,6 @@ class TitleBar(QWidget):
         self.scaled_pixmap = self.maximizeIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.exitIcon = QPixmap(self.get_resource_path("images/exit.png"))
         self.scaled_pixmap = self.exitIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
-        # Window controls
         self.minimize_btn = QPushButton()
         self.maximize_btn = QPushButton()
         self.close_btn = QPushButton()
@@ -134,7 +130,6 @@ class TitleBar(QWidget):
             }
         """)
         
-        # Add widgets to layout
         self.layout.addWidget(self.AiCoreLabel)
         self.layout.addWidget(self.file_btn)
         self.layout.addStretch(1)
@@ -142,7 +137,6 @@ class TitleBar(QWidget):
         self.layout.addWidget(self.maximize_btn)
         self.layout.addWidget(self.close_btn)
         
-        # Connect buttons
         self.minimize_btn.clicked.connect(self.parent.showMinimized)
         self.maximize_btn.clicked.connect(self.toggle_maximize)
         self.close_btn.clicked.connect(self.parent.close)
@@ -180,7 +174,7 @@ class TitleBar(QWidget):
         self.pressing = False
 
     def get_resource_path(self, relative_path):
-        if getattr(sys, 'frozen', False):  # If the script is run from an executable
+        if getattr(sys, 'frozen', False): 
             base_path = sys._MEIPASS
         else:
             base_path = os.path.abspath(".")
@@ -276,9 +270,6 @@ class MainWindow(QMainWindow):
         self.add_points_btn.clicked.connect(self.open_image_with_interaction)
         self.sidebar_layout.addWidget(self.add_points_btn)
 
-        self.splitter = QSplitter(Qt.Horizontal)
-        self.sidebar_layout.addWidget(self.splitter)
-        
         self.texture_select = QComboBox()
         self.texture_select.addItem("Floor")
         self.texture_select.addItem("Right")
@@ -308,7 +299,7 @@ class MainWindow(QMainWindow):
         self.report = QPushButton("Generate Report")
         self.report.setIcon(QIcon(self.scaled_pixmap6))
         self.report.setIconSize(QSize(20,20))
-        self.report.clicked.connect(self.generateReport)  # Fixed connection
+        self.report.clicked.connect(self.generateReport)
         self.sidebar_layout.addWidget(self.report)
 
         self.simulate = QPushButton("Simulate")
@@ -405,10 +396,8 @@ class MainWindow(QMainWindow):
         index = self.object_list.row(item)
         selected_segment = self.segments[index]
         
-        # Update information labels with selected spatter data
         self.AngleReport.setText(f"Impact Angle: {round(selected_segment['angle'], 2)}°")
 
-        # Calculate direction and height for selected spatter
         start = selected_segment["center"]
         end = selected_segment["line_endpoints"]["negative_direction"]
         dx = end[0] - start[0]
@@ -416,12 +405,10 @@ class MainWindow(QMainWindow):
         distance = math.sqrt(dx*dx + dy*dy)
         bz = distance * math.sin(math.radians(selected_segment["angle"]))
         
-        # Calculate direction
         angle = math.degrees(math.atan2(dy, dx))
         if angle < 0:
             angle += 360
         
-        # Map angle to direction
         direction = "East"
         if 22.5 <= angle < 67.5:
             direction = "Northeast"
@@ -440,7 +427,6 @@ class MainWindow(QMainWindow):
         
         self.HeightReport.setText(f"Point of Origin: {round(bz, 2)} mm {direction}")
         
-        # Highlight selected spatter
         orientation = self.texture_select.currentText().lower()
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
