@@ -63,6 +63,13 @@ class MenuButton(QPushButton):
                 canEnable = True
                 active_folder = case_folder 
                 self.main_window.enableUI(canEnable)
+        elif action.text() == "Open":
+            folder_path = QFileDialog.getExistingDirectory(self, "Select Directory for Case")
+            if folder_path:
+                canEnable = True
+                active_folder = folder_path
+                self.main_window.enableUI(canEnable)
+                self.main_window.load_objects_from_json()
 
 class TitleBar(QWidget):
     def __init__(self, parent=None):
@@ -642,7 +649,6 @@ class MainWindow(QMainWindow):
         except json.JSONDecodeError:
             QMessageBox.warning(self, "Error", "Error decoding JSON.")
             
-        # Redraw all lines
         for segment in self.segments:
             self.generate_3d_line(segment)
 
@@ -661,7 +667,6 @@ class MainWindow(QMainWindow):
         image_height = self.default_size[1]  
         
         self.impact_angles.append(abs(self.angle))
-        # Convert 2D points to origin-relative coordinates
         Ax = self.start_point_2d[0] - image_width / 2  
         Ay = -(self.start_point_2d[1] - image_height / 2)  
         Az = 0
@@ -677,7 +682,6 @@ class MainWindow(QMainWindow):
         print(f"Start : {initAx} , {initAy}")
         print(f"End: {Bx} , {By}")
 
-        # Calculate 3D distance
         Bxy = math.sqrt(((initBx - (initAx))**2) + ((initBy - (initAy))**2))
         print(f"height: {Bxy}")
 
@@ -691,23 +695,20 @@ class MainWindow(QMainWindow):
                 end_point = np.array([Bx, By, abs(self.Bz)])
             
             case "right":
-                start_point = np.array([Az, Ay -image_height/2, (image_height / 2) - Bx])  # Y and Z swapped
-                end_point = np.array([self.Bz, By -image_height/2, (image_height / 2) - Ax])  # Y and Z swapped
+                start_point = np.array([Az, Ay -image_height/2, (image_height / 2) - Bx])  
+                end_point = np.array([self.Bz, By -image_height/2, (image_height / 2) - Ax])  
 
 
-        # Determine direction of travel
         dx = initBx - initAx
         dy = initBy - initAy
 
         if dx == 0 and dy == 0:
             self.direction = "No movement"
         else:
-            # Calculate angle in 2D space
             angle = math.degrees(math.atan2(dy, dx))
             if angle < 0:
-                angle += 360  # Normalize to 0-360 degrees
+                angle += 360  
 
-            # Map angle to direction
             if 22.5 <= angle < 67.5:
                 self.direction = "Northeast"
             elif 67.5 <= angle < 112.5:
@@ -727,7 +728,6 @@ class MainWindow(QMainWindow):
 
         print(f"Direction of Travel: {self.direction}")
 
-        # Add visual representation of line
         line = pv.Line(start_point, end_point)
         self.plotter.add_mesh(line, color=color, line_width=3)
         self.plotter.update()
@@ -735,7 +735,6 @@ class MainWindow(QMainWindow):
         self.Conclusive.setText(f"Classification: Medium Velocity")
     
     def generateReport(self):
-        # Fetch inputs from textboxes
         case_number = self.caseNumber.text()
         investigator_name = self.investigator.text()
         location = self.location.text()
@@ -750,10 +749,8 @@ class MainWindow(QMainWindow):
 
         doc = Document()
 
-        # Title
         doc.add_heading('Bloodstain Pattern Analysis Report', level=1).alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-        # Case Details
         doc.add_heading('Case Details', level=2)
         doc.add_paragraph(f"Case Number: {case_number}")
         doc.add_paragraph(f"Investigator Name: {investigator_name}")
