@@ -70,6 +70,72 @@ class MenuButton(QPushButton):
                 active_folder = folder_path
                 self.main_window.enableUI(canEnable)
                 self.main_window.load_objects_from_json()
+class EditButton(QPushButton):
+    def __init__(self, main_window, parent=None):
+        super().__init__("Edit", parent)
+        self.main_window = main_window
+        self.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                color: white;
+                border: none;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                background: rgba(255,255,255,0.1);
+            }
+        """)
+        
+        self.menu = QMenu(self)
+        self.menu.setStyleSheet("""
+            QMenu {
+                background-color: #2d2d2d;
+                color: white;
+                border: 1px solid #3d3d3d;
+            }
+            QMenu::item:selected {
+                background-color: #3d3d3d;
+            }
+        """)
+        
+        self.menu.addAction("Undo Action")
+        self.setMenu(self.menu)
+        
+        self.menu.triggered.connect(self.handleMenuAction)
+        
+        # Store previous state
+        self.previous_states = []
+
+    def handleMenuAction(self, action):
+        if action.text() == "Undo Action":
+            self.undo_last_action()
+
+    def undo_last_action(self):
+        global active_folder
+        if not active_folder:
+            QMessageBox.warning(self, "Error", "No active folder selected.")
+            return
+
+        json_file = os.path.join(active_folder, "Data.json")
+        try:
+            with open(json_file, 'r') as file:
+                current_data = json.load(file)
+                
+            if len(current_data) > 0:
+                # Remove the last entry
+                current_data.pop()
+                
+                # Save the updated data
+                with open(json_file, 'w') as file:
+                    json.dump(current_data, file)
+                
+                # Update the UI
+                self.main_window.load_objects_from_json()
+                QMessageBox.information(self, "Success", "Last action undone successfully.")
+            else:
+                QMessageBox.warning(self, "Warning", "No actions to undo.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to undo action: {str(e)}")
 
 class TitleBar(QWidget):
     def __init__(self, parent=None):
@@ -97,6 +163,7 @@ class TitleBar(QWidget):
                 background: rgba(255,255,255,0.1);
             }
         """)
+        self.edit_btn = EditButton(parent)
         self.minimizeIcon = QPixmap(self.get_resource_path("images/minimize.png"))
         self.scaled_pixmap = self.minimizeIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.maximizeIcon = QPixmap(self.get_resource_path("images/maximize.png"))
@@ -139,6 +206,7 @@ class TitleBar(QWidget):
         
         self.layout.addWidget(self.AiCoreLabel)
         self.layout.addWidget(self.file_btn)
+        self.layout.addWidget(self.edit_btn)
         self.layout.addStretch(1)
         self.layout.addWidget(self.minimize_btn)
         self.layout.addWidget(self.maximize_btn)
@@ -287,6 +355,18 @@ class MainWindow(QMainWindow):
 
         self.sidebar_layout.addStretch()
 
+        self.ObjectListLabel = QLabel("Spatters:")
+        self.sidebar_layout.addWidget(self.ObjectListLabel)
+        self.object_list = QListWidget()
+        self.object_list.itemClicked.connect(self.on_object_selected)
+        self.sidebar_layout.addWidget(self.object_list)
+
+        self.delete_button = QPushButton("Delete Selected")
+        self.delete_button.clicked.connect(self.delete_selected_object)
+        self.sidebar_layout.addWidget(self.delete_button)
+
+        self.sidebar_layout.addStretch()
+
         self.caseNumberLabel = QLabel("Case Number:")
         self.sidebar_layout.addWidget(self.caseNumberLabel)
         self.caseNumber = QLineEdit()
@@ -312,16 +392,6 @@ class MainWindow(QMainWindow):
         self.simulate = QPushButton("Simulate")
         self.sidebar_layout.addWidget(self.simulate)
         self.simulate.clicked.connect(self.open_blender_file)
-
-        self.sidebar_layout.addStretch()
-
-        self.object_list = QListWidget()
-        self.object_list.itemClicked.connect(self.on_object_selected)
-        self.sidebar_layout.addWidget(self.object_list)
-
-        self.delete_button = QPushButton("Delete Selected")
-        self.delete_button.clicked.connect(self.delete_selected_object)
-        self.sidebar_layout.addWidget(self.delete_button)
 
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")
@@ -661,53 +731,81 @@ class MainWindow(QMainWindow):
         self.impact_angles = []
         orientation = self.texture_select.currentText().lower()
 
-        print(f"test: {self.end_point2d}")
+        image_width = self.default_size[0]
+        image_height = self.default_size[1]
 
-        image_width = self.default_size[0]  
-        image_height = self.default_size[1]  
-        
         self.impact_angles.append(abs(self.angle))
-        Ax = self.start_point_2d[0] - image_width / 2  
-        Ay = -(self.start_point_2d[1] - image_height / 2)  
+
+        # Convert 2D coordinates to 3D space
+        Ax = self.start_point_2d[0] - image_width / 2
+        Ay = -(self.start_point_2d[1] - image_height / 2)
         Az = 0
 
         Bx = self.end_point2d[0] - image_width / 2
         By = -(self.end_point2d[1] - image_height / 2)
 
-        initAx = Ax
-        initAy = Ay
-        initBx = Bx
-        initBy = By
-
-        print(f"Start : {initAx} , {initAy}")
-        print(f"End: {Bx} , {By}")
-
-        Bxy = math.sqrt(((initBx - (initAx))**2) + ((initBy - (initAy))**2))
-        print(f"height: {Bxy}")
-
+        # Calculate height for impact angle
+        Bxy = math.sqrt(((Bx - Ax) ** 2) + ((By - Ay) ** 2))
         angleInDeg = self.angle
         Bxyz = math.sin(math.radians(angleInDeg))
         self.Bz = (Bxyz * Bxy)
 
-        match orientation:
-            case "floor":
-                start_point = np.array([Ax, Ay, Az])
-                end_point = np.array([Bx, By, abs(self.Bz)])
-            
-            case "right":
-                start_point = np.array([Az, Ay -image_height/2, (image_height / 2) - Bx])  
-                end_point = np.array([self.Bz, By -image_height/2, (image_height / 2) - Ax])  
+        # Create initial 3D points
+        start_point = np.array([Ax, Ay, Az])
+        end_point = np.array([Bx, By, abs(self.Bz)])
 
+        if orientation != "floor":
+            # Define rotation parameters based on wall orientation
+            rotation_params = {
+                "right": (np.array([0, 1, 0]), 90),  # Rotate around Y-axis
+                "left": (np.array([0, 1, 0]), -90),  # Rotate around Y-axis
+                "back": (np.array([1, 0, 0]), -90),  # Rotate around X-axis
+                "front": (np.array([1, 0, 0]), 90),  # Rotate around X-axis
+            }
 
-        dx = initBx - initAx
-        dy = initBy - initAy
+            if orientation in rotation_params:
+                rotation_axis, angle = rotation_params[orientation]
+                theta = np.radians(angle)
 
+                # Normalize rotation axis
+                rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+
+                # Compute rotation matrix using Rodrigues formula
+                K = np.array([
+                    [0, -rotation_axis[2], rotation_axis[1]],
+                    [rotation_axis[2], 0, -rotation_axis[0]],
+                    [-rotation_axis[1], rotation_axis[0], 0]
+                ])
+                R = np.eye(3) + np.sin(theta) * K + (1 - np.cos(theta)) * np.dot(K, K)
+
+                # Rotate points
+                start_point = np.dot(R, start_point)
+                end_point = np.dot(R, end_point)
+
+                # Translate points to the wall plane
+                if orientation == "right":
+                    translation = np.array([image_width / 2, 0, 0])
+                elif orientation == "left":
+                    translation = np.array([-image_width / 2, 0, 0])
+                elif orientation == "back":
+                    translation = np.array([0, -image_width / 2, 0])
+                elif orientation == "front":
+                    translation = np.array([0, image_width / 2, 0])
+                else:
+                    translation = np.array([0, 0, 0])
+
+                start_point += translation
+                end_point += translation
+
+        # Calculate direction for reporting
+        dx = Bx - Ax
+        dy = By - Ay
         if dx == 0 and dy == 0:
             self.direction = "No movement"
         else:
             angle = math.degrees(math.atan2(dy, dx))
             if angle < 0:
-                angle += 360  
+                angle += 360
 
             if 22.5 <= angle < 67.5:
                 self.direction = "Northeast"
@@ -726,13 +824,13 @@ class MainWindow(QMainWindow):
             else:
                 self.direction = "East"
 
-        print(f"Direction of Travel: {self.direction}")
-
+        # Create and add the line to the plot
         line = pv.Line(start_point, end_point)
         self.plotter.add_mesh(line, color=color, line_width=3)
         self.plotter.update()
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
+
     
     def generateReport(self):
         case_number = self.caseNumber.text()
