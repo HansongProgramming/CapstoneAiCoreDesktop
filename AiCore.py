@@ -598,10 +598,10 @@ class MainWindow(QMainWindow):
 
         plane_center = {
             "floor": (0, 0, 0),
-            "right": (self.default_size[0] / 2, 0, height / 2),
-            "left": (-self.default_size[0] / 2, 0, height / 2),
-            "back": (0, -self.default_size[1] / 2, height / 2),
-            "front": (0, self.default_size[1] / 2, height / 2),
+            "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
+            "left":  (-self.default_size[0] / 2, 0, self.default_size[0]/2),
+            "back":  (0, -self.default_size[1] / 2, self.default_size[1] / 2),
+            "front": (0, self.default_size[1] / 2, self.default_size[1] / 2),
         }
         plane_direction = {
             "floor": (0, 0, 1),
@@ -623,6 +623,11 @@ class MainWindow(QMainWindow):
                 i_resolution=i_resolution, 
                 j_resolution=j_resolution, 
             )
+
+            if position == "front" or position == "back":
+                rotationAngle = 90 if position == "front" else -90
+                plane = plane.rotate_y(rotationAngle, point=plane_center[position])
+                print(plane)
             self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
     
     def open_image_with_interaction(self):
