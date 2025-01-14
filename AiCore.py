@@ -103,7 +103,6 @@ class EditButton(QPushButton):
         
         self.menu.triggered.connect(self.handleMenuAction)
         
-        # Store previous state
         self.previous_states = []
 
     def handleMenuAction(self, action):
@@ -122,14 +121,11 @@ class EditButton(QPushButton):
                 current_data = json.load(file)
                 
             if len(current_data) > 0:
-                # Remove the last entry
                 current_data.pop()
                 
-                # Save the updated data
                 with open(json_file, 'w') as file:
                     json.dump(current_data, file)
                 
-                # Update the UI
                 self.main_window.load_objects_from_json()
                 QMessageBox.information(self, "Success", "Last action undone successfully.")
             else:
@@ -575,7 +571,7 @@ class MainWindow(QMainWindow):
                 with Image.open(file_path) as img:
                     width, height = img.size
                 texture = pv.read_texture(file_path)
-                print(f"Loaded texture from: {file_path}")  # Debug message
+                print(f"Loaded texture from: {file_path}")  
                 return width, height, texture, file_path
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to load texture: {e}")
@@ -588,7 +584,7 @@ class MainWindow(QMainWindow):
             self.default_size = (width, height) 
             self.textures[position] = texture  
             self.image_paths[position] = image_path  
-            print(f"Loaded texture for {position}: {image_path}")  # Debug message
+            print(f"Loaded texture for {position}: {image_path}")
         else:
             # Fallback to default size and empty image path
             width, height = self.default_size[0], self.default_size[1]
@@ -606,7 +602,7 @@ class MainWindow(QMainWindow):
         plane_direction = {
             "floor": (0, 0, 1),
             "right": (1, 0, 0),
-            "left": (-1, 0, 0),
+            "left": (1, 0, 0),
             "back": (0, -1, 0),
             "front": (0, 1, 0),
         }
@@ -628,6 +624,8 @@ class MainWindow(QMainWindow):
                 rotationAngle = 90 if position == "front" else -90
                 plane = plane.rotate_y(rotationAngle, point=plane_center[position])
                 print(plane)
+            elif position == "left":
+                plane.rotate_z(180)
             self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
     
     def open_image_with_interaction(self):
@@ -759,49 +757,6 @@ class MainWindow(QMainWindow):
         start_point = np.array([Ax, Ay, Az])
         end_point = np.array([Bx, By, abs(self.Bz)])
 
-        if orientation != "floor":
-            # Define rotation parameters based on wall orientation
-            rotation_params = {
-                "right": (np.array([0, 1, 0]), 90),  # Rotate around Y-axis
-                "left": (np.array([0, 1, 0]), -90),  # Rotate around Y-axis
-                "back": (np.array([1, 0, 0]), -90),  # Rotate around X-axis
-                "front": (np.array([1, 0, 0]), 90),  # Rotate around X-axis
-            }
-
-            if orientation in rotation_params:
-                rotation_axis, angle = rotation_params[orientation]
-                theta = np.radians(angle)
-
-                # Normalize rotation axis
-                rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
-
-                # Compute rotation matrix using Rodrigues formula
-                K = np.array([
-                    [0, -rotation_axis[2], rotation_axis[1]],
-                    [rotation_axis[2], 0, -rotation_axis[0]],
-                    [-rotation_axis[1], rotation_axis[0], 0]
-                ])
-                R = np.eye(3) + np.sin(theta) * K + (1 - np.cos(theta)) * np.dot(K, K)
-
-                # Rotate points
-                start_point = np.dot(R, start_point)
-                end_point = np.dot(R, end_point)
-
-                # Translate points to the wall plane
-                if orientation == "right":
-                    translation = np.array([image_width / 2, 0, 0])
-                elif orientation == "left":
-                    translation = np.array([-image_width / 2, 0, 0])
-                elif orientation == "back":
-                    translation = np.array([0, -image_width / 2, 0])
-                elif orientation == "front":
-                    translation = np.array([0, image_width / 2, 0])
-                else:
-                    translation = np.array([0, 0, 0])
-
-                start_point += translation
-                end_point += translation
-
         # Calculate direction for reporting
         dx = Bx - Ax
         dy = By - Ay
@@ -823,14 +778,38 @@ class MainWindow(QMainWindow):
             elif 202.5 <= angle < 247.5:
                 self.direction = "Southwest"
             elif 247.5 <= angle < 292.5:
-                self.direction = "South"
+                self.direction = "South" 
             elif 292.5 <= angle < 337.5:
                 self.direction = "Southeast"
             else:
                 self.direction = "East"
+        
+        print(end_point)
 
-        # Create and add the line to the plot
-        line = pv.Line(start_point, end_point)
+        orientation = self.texture_select.currentText().lower()
+        if orientation == "right":
+            start_point =   np.array([(self.default_size[0] / 2),   Ay, (self.default_size[0] / 2 - Ax)])
+            end_point =     np.array([(Bx - self.default_size[0] / 2), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
+        elif orientation == "left":
+            start_point =   np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
+            end_point =     np.array([(self.default_size[0] / 2 - Bx), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
+        elif orientation == "back":
+            start_point =   np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 - Ay)])
+            end_point =     np.array([(Bx - self.default_size[1] / 2), (self.default_size[1] / 2 - By), (self.default_size[1] / 2 - Bx)])
+        elif orientation == "front":
+            start_point =   np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 - Ay)])
+            end_point =     np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 - Bx)])
+
+        line = pv.Arrow(
+            start_point, 
+            end_point, 
+            tip_length=0.05,
+            tip_radius=0.009, 
+            tip_resolution=20,
+            shaft_radius=0.001,
+            scale=self.default_size[0]
+        )
+        print(end_point)
         self.plotter.add_mesh(line, color=color, line_width=3)
         self.plotter.update()
 

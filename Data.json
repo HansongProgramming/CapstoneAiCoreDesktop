@@ -1,38 +1,56 @@
-<<<<<<< HEAD
 [
     {
         "center": [
-            703,
-            771
+            781,
+            871
         ],
-        "angle": 31.31070863180917,
+        "angle": 33.00091605381409,
         "line_endpoints": {
             "positive_direction": [
-                830,
+                851,
                 980
             ],
             "negative_direction": [
-                235,
+                217,
                 2
             ]
         },
-        "spatter_count": 3,
-        "segment_number": 3
+        "spatter_count": 1,
+        "segment_number": 1
     },
     {
         "center": [
-            390,
-            917
+            640,
+            490
         ],
-        "angle": 15.032775699551962,
+        "angle": 126.49732123353392,
         "line_endpoints": {
             "positive_direction": [
-                406,
-                979
+                1299,
+                2
             ],
             "negative_direction": [
-                144,
-                4
+                0,
+                962
+            ]
+        },
+        "spatter_count": 1,
+        "segment_number": 2
+    },
+    {
+        "center": [
+            482,
+            814
+        ],
+        "angle": 20.749034261604066,
+        "line_endpoints": {
+            "positive_direction": [
+                545,
+                982
+            ],
+            "negative_direction": [
+                173,
+                0
             ]
         },
         "spatter_count": 1,
@@ -40,78 +58,21 @@
     },
     {
         "center": [
-            390,
-            916
+            702,
+            771
         ],
-        "angle": 14.619068714843195,
+        "angle": 31.417137254118728,
         "line_endpoints": {
             "positive_direction": [
-                406,
-                978
+                829,
+                980
             ],
             "negative_direction": [
-                151,
-                1
-            ]
-        },
-        "spatter_count": 1,
-        "segment_number": 3
-    },
-    {
-        "center": [
-            1131,
-            461
-        ],
-        "angle": 57.98533812325065,
-        "line_endpoints": {
-            "positive_direction": [
-                1309,
-                572
-            ],
-            "negative_direction": [
-                397,
+                232,
                 2
             ]
         },
         "spatter_count": 1,
         "segment_number": 4
-    },
-    {
-        "center": [
-            1035,
-            905
-        ],
-        "angle": 40.19411328880099,
-        "line_endpoints": {
-            "positive_direction": [
-                1099,
-                981
-            ],
-            "negative_direction": [
-                273,
-                3
-            ]
-        },
-        "spatter_count": 1,
-        "segment_number": 5
-    },
-    {
-        "center": [
-            761,
-            360
-        ],
-        "angle": 64.01100367461349,
-        "line_endpoints": {
-            "positive_direction": [
-                1309,
-                627
-            ],
-            "negative_direction": [
-                23,
-                0
-            ]
-        },
-        "spatter_count": 1,
-        "segment_number": 6
     }
 ]
