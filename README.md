@@ -1,15 +1,33 @@
-# AiCore
-Powering a system named SpatterSense.
+<h1 align="center" id="title">AiCore</h1>
 
-Developed by:
+<p id="description">Artificial Intelligence in Crime Observations and Reconstruction Efficiency</p>
 
-Flores Hans Harold L.
-Reburiano Augnina Krizel P.
+  
+  
+<h2>🧐 Features</h2>
 
-In partial fulfillment of the 
-requirements for the course 
-CIT6 and CIT 7 Capstone 1 and Capstone 2.
+Here're some of the project's best features:
 
-@2024-2025 - University of the Cordilleras.
+*   Blood Spatter Segmentation
+*   3-Dimensional Plotting
+*   Automated Bloodstain Pattern Analysis
+*   Generative Report Tool
 
+  
+  
+<h2>💻 Built with</h2>
 
+Technologies used in the project:
+
+*   Pyvista
+*   Pyqt
+*   OpenCV
+*   Matplotlib
+*   Segment-Anything
+*   Pillow
+*   PyTorch
+*   OS
+*   SYS
+*   Json
+*   Python-Docx
+*   numpy
