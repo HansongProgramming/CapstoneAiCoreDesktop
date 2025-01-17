@@ -620,10 +620,13 @@ class MainWindow(QMainWindow):
                 j_resolution=j_resolution, 
             )
 
-            if position == "front" or position == "back":
-                rotationAngle = 90 if position == "front" else -90
+            if position == "back":
+                rotationAngle = -90
                 plane = plane.rotate_y(rotationAngle, point=plane_center[position])
-                print(plane)
+            elif position == "front":
+                rotationAngle = 90
+                plane = plane.rotate_y(rotationAngle, point=plane_center[position])
+                plane = plane.rotate_z(180 , point=plane_center[position])
             elif position == "left":
                 plane.rotate_z(180)
             self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
@@ -794,11 +797,11 @@ class MainWindow(QMainWindow):
             start_point =   np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
             end_point =     np.array([(self.default_size[0] / 2 - Bx), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
         elif orientation == "back":
-            start_point =   np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 - Ay)])
-            end_point =     np.array([(Bx - self.default_size[1] / 2), (self.default_size[1] / 2 - By), (self.default_size[1] / 2 - Bx)])
+            start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
+            end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1] /2 + By), (self.default_size[1] / 2 + By)])
         elif orientation == "front":
-            start_point =   np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 - Ay)])
-            end_point =     np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 - Bx)])
+            start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
+            end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
 
         line = pv.Arrow(
             start_point, 
