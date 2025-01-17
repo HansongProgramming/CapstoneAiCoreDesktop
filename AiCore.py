@@ -735,14 +735,14 @@ class MainWindow(QMainWindow):
         self.spatterCount = segment["spatter_count"]
         self.end_point2d = segment["line_endpoints"]["negative_direction"]
         self.impact_angles = []
-        orientation = self.texture_select.currentText().lower()
+        
+        orientation = segment.get("origin", self.texture_select.currentText().lower())
 
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
         self.impact_angles.append(abs(self.angle))
 
-        # Convert 2D coordinates to 3D space
         Ax = self.start_point_2d[0] - image_width / 2
         Ay = -(self.start_point_2d[1] - image_height / 2)
         Az = 0
@@ -750,17 +750,14 @@ class MainWindow(QMainWindow):
         Bx = self.end_point2d[0] - image_width / 2
         By = -(self.end_point2d[1] - image_height / 2)
 
-        # Calculate height for impact angle
         Bxy = math.sqrt(((Bx - Ax) ** 2) + ((By - Ay) ** 2))
         angleInDeg = self.angle
         Bxyz = math.sin(math.radians(angleInDeg))
         self.Bz = (Bxyz * Bxy)
 
-        # Create initial 3D points
         start_point = np.array([Ax, Ay, Az])
         end_point = np.array([Bx, By, abs(self.Bz)])
 
-        # Calculate direction for reporting
         dx = Bx - Ax
         dy = By - Ay
         if dx == 0 and dy == 0:
@@ -789,13 +786,12 @@ class MainWindow(QMainWindow):
         
         print(end_point)
 
-        orientation = self.texture_select.currentText().lower()
         if orientation == "right":
-            start_point =   np.array([(self.default_size[0] / 2),   Ay, (self.default_size[0] / 2 - Ax)])
-            end_point =     np.array([(Bx - self.default_size[0] / 2), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
+            start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
+            end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
         elif orientation == "left":
-            start_point =   np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
-            end_point =     np.array([(self.default_size[0] / 2 - Bx), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
+            start_point = np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
+            end_point = np.array([(self.default_size[0] / 2 - Bx), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
         elif orientation == "back":
             start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
             end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1] /2 + By), (self.default_size[1] / 2 + By)])

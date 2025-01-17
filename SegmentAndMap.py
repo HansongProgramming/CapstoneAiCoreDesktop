@@ -32,7 +32,7 @@ class SegmentAndMap(QDialog):
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
-
+        print(self.device)
         sidebar_layout = QVBoxLayout()
 
         self.undo_button = QPushButton("Undo", self)
@@ -181,6 +181,9 @@ class SegmentAndMap(QDialog):
         # Count the current number of spatters
         num_spatters = len(self.segmented_masks)
 
+        # Get the origin plane from the parent window's texture_select
+        origin_plane = self.parent().texture_select.currentText().lower()
+
         segment_data = {
             "center": [center_x, center_y], 
             "angle": float(impact_angle),  
@@ -188,11 +191,11 @@ class SegmentAndMap(QDialog):
                 "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
                 "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
             },
-            "spatter_count": num_spatters  # Add the current number of spatters
+            "spatter_count": num_spatters,
+            "origin": origin_plane  # Add the origin plane information
         }
         print(center_x, center_y)
         return impact_angle, segment_data
-
 
     def calculate_angle(self, mask):
         y, x = np.where(mask > 0)
