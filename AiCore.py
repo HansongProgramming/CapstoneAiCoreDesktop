@@ -57,9 +57,20 @@ class MenuButton(QPushButton):
                 folder_name, ok = QInputDialog.getText(self, "Folder Name", "Enter a name for the new case folder:")
                 case_folder = os.path.join(folder_path, folder_name)
                 os.makedirs(case_folder, exist_ok=True)
+                
+                # Create Data.json
                 data_file = os.path.join(case_folder, "Data.json")
                 with open(data_file, 'w') as json_file:
-                    json.dump([], json_file)  
+                    json.dump([], json_file)
+                
+                # Create Assets.json
+                assets_file = os.path.join(case_folder, "Assets.json")
+                with open(assets_file, 'w') as json_file:
+                    json.dump({}, json_file)
+                
+                # Create assets directory
+                os.makedirs(os.path.join(case_folder, "assets"), exist_ok=True)
+                
                 canEnable = True
                 active_folder = case_folder 
                 self.main_window.enableUI(canEnable)
@@ -69,7 +80,35 @@ class MenuButton(QPushButton):
                 canEnable = True
                 active_folder = folder_path
                 self.main_window.enableUI(canEnable)
+                
+                # Load assets first
+                assets_file = os.path.join(active_folder, "Assets.json")
+                if os.path.exists(assets_file):
+                    try:
+                        with open(assets_file, 'r') as f:
+                            assets_data = json.load(f)
+                        
+                        # Load each plane with its image
+                        for position, relative_path in assets_data.items():
+                            full_path = os.path.join(active_folder, relative_path)
+                            if os.path.exists(full_path):
+                                texture = pv.read_texture(full_path)
+                                img = QImage(full_path)
+                                width = img.width()
+                                height = img.height()
+                                
+                                self.main_window.default_size = (width, height)
+                                self.main_window.textures[position] = texture
+                                self.main_window.image_paths[position] = full_path
+                                
+                                # Add plane with loaded texture
+                                self.main_window.add_plane_with_image(position)
+                    except Exception as e:
+                        QMessageBox.warning(self, "Error", f"Failed to load assets: {e}")
+                
+                # Then load and plot the data
                 self.main_window.load_objects_from_json()
+
 class EditButton(QPushButton):
     def __init__(self, main_window, parent=None):
         super().__init__("Edit", parent)
@@ -579,14 +618,61 @@ class MainWindow(QMainWindow):
         return None, None, None, None
     
     def add_plane_with_image(self, position):
+        global active_folder
+        if not active_folder:
+            QMessageBox.warning(self, "Error", "No active folder selected.")
+            return
+
         width, height, texture, image_path = self.load_image() 
+        if not image_path:
+            return
+
+        # Create assets directory if it doesn't exist
+        assets_dir = os.path.join(active_folder, "assets")
+        os.makedirs(assets_dir, exist_ok=True)
+
+        # Get the file extension from original image
+        _, ext = os.path.splitext(image_path)
+        
+        # Create new filename based on position
+        new_filename = f"{position}{ext}"
+        new_image_path = os.path.join(assets_dir, new_filename)
+
+        # Copy the image file
+        try:
+            import shutil
+            shutil.copy2(image_path, new_image_path)
+            print(f"Image copied to: {new_image_path}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to copy image: {e}")
+            return
+
+        # Update or create Assets.json
+        assets_json_path = os.path.join(active_folder, "Assets.json")
+        try:
+            if os.path.exists(assets_json_path):
+                with open(assets_json_path, 'r') as f:
+                    assets_data = json.load(f)
+            else:
+                assets_data = {}
+
+            # Update the assets data with relative path
+            assets_data[position] = os.path.join("assets", new_filename)
+
+            with open(assets_json_path, 'w') as f:
+                json.dump(assets_data, f, indent=4)
+                print(f"Assets.json updated with {position} image")
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to update Assets.json: {e}")
+            return
+
         if texture:
             self.default_size = (width, height) 
             self.textures[position] = texture  
-            self.image_paths[position] = image_path  
-            print(f"Loaded texture for {position}: {image_path}")
+            self.image_paths[position] = new_image_path  # Use the new image path
+            print(f"Loaded texture for {position}: {new_image_path}")
         else:
-            # Fallback to default size and empty image path
             width, height = self.default_size[0], self.default_size[1]
             texture = None
             if position not in self.image_paths:
@@ -630,22 +716,43 @@ class MainWindow(QMainWindow):
             elif position == "left":
                 plane.rotate_z(180)
             self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
+
     
     def open_image_with_interaction(self):
         global active_folder
         position = self.texture_select.currentText().lower()
-        print(f"test: {position}")
-        print(f"Loaded texture for {position}: {self.image_paths.get(position)}")
+        
+        # Try to get image path from Assets.json first
+        assets_json_path = os.path.join(active_folder, "Assets.json")
+        if os.path.exists(assets_json_path):
+            try:
+                with open(assets_json_path, 'r') as f:
+                    assets_data = json.load(f)
+                    if position in assets_data:
+                        image_path = os.path.join(active_folder, assets_data[position])
+                        if os.path.exists(image_path):
+                            self.path = os.path.join(active_folder, "Data.json")
+                            self.json_file = str(self.path)
+                            jsonpath = self.json_file
+                            dialog = SegmentAndMap(image_path, jsonpath, self)
+                            dialog.dataUpdated.connect(self.update_from_interaction)
+                            dialog.exec_()
+                            return
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
+        
+        # Fallback to old behavior if Assets.json doesn't exist or doesn't have the image
         image_path = self.image_paths.get(position)
-        self.path = os.path.join(active_folder, "Data.json")
-        self.json_file = str(self.path)
-        jsonpath = self.json_file
         if image_path:
-            dialog = SegmentAndMap(image_path,jsonpath, self)
+            self.path = os.path.join(active_folder, "Data.json")
+            self.json_file = str(self.path)
+            jsonpath = self.json_file
+            dialog = SegmentAndMap(image_path, jsonpath, self)
             dialog.dataUpdated.connect(self.update_from_interaction)
             dialog.exec_()
         else:
             QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
+
     
     def update_from_interaction(self, json_data):
         self.load_objects_from_json()
