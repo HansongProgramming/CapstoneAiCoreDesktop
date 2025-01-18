@@ -618,106 +618,125 @@ class MainWindow(QMainWindow):
         return None, None, None, None
     
     def add_plane_with_image(self, position):
-        global active_folder
-        if not active_folder:
-            QMessageBox.warning(self, "Error", "No active folder selected.")
-            return
+            global active_folder
+            if not active_folder:
+                QMessageBox.warning(self, "Error", "No active folder selected.")
+                return
 
-        width, height, texture, image_path = self.load_image() 
-        if not image_path:
-            return
-
-        # Create assets directory if it doesn't exist
-        assets_dir = os.path.join(active_folder, "assets")
-        os.makedirs(assets_dir, exist_ok=True)
-
-        # Get the file extension from original image
-        _, ext = os.path.splitext(image_path)
-        
-        # Create new filename based on position
-        new_filename = f"{position}{ext}"
-        new_image_path = os.path.join(assets_dir, new_filename)
-
-        # Copy the image file
-        try:
-            import shutil
-            shutil.copy2(image_path, new_image_path)
-            print(f"Image copied to: {new_image_path}")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to copy image: {e}")
-            return
-
-        # Update or create Assets.json
-        assets_json_path = os.path.join(active_folder, "Assets.json")
-        try:
+            # First check if image already exists in Assets.json
+            assets_json_path = os.path.join(active_folder, "Assets.json")
             if os.path.exists(assets_json_path):
-                with open(assets_json_path, 'r') as f:
-                    assets_data = json.load(f)
+                try:
+                    with open(assets_json_path, 'r') as f:
+                        assets_data = json.load(f)
+                        if position in assets_data:
+                            # Image already exists, load it directly
+                            image_path = os.path.join(active_folder, assets_data[position])
+                            if os.path.exists(image_path):
+                                try:
+                                    with Image.open(image_path) as img:
+                                        width, height = img.size
+                                    texture = pv.read_texture(image_path)
+                                    self.default_size = (width, height)
+                                    self.textures[position] = texture
+                                    self.image_paths[position] = image_path
+                                    self.create_plane(position, width, height, texture)
+                                    return
+                                except Exception as e:
+                                    QMessageBox.warning(self, "Error", f"Failed to load existing texture: {e}")
+                except Exception as e:
+                    QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
+
+            # If no existing image found, proceed with selecting new image
+            width, height, texture, image_path = self.load_image()
+            if not image_path:
+                return
+
+            # Create assets directory if it doesn't exist
+            assets_dir = os.path.join(active_folder, "assets")
+            os.makedirs(assets_dir, exist_ok=True)
+
+            # Get the file extension from original image
+            _, ext = os.path.splitext(image_path)
+            
+            # Create new filename based on position
+            new_filename = f"{position}{ext}"
+            new_image_path = os.path.join(assets_dir, new_filename)
+
+            # Copy the image file
+            try:
+                import shutil
+                shutil.copy2(image_path, new_image_path)
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to copy image: {e}")
+                return
+
+            # Update Assets.json
+            try:
+                if os.path.exists(assets_json_path):
+                    with open(assets_json_path, 'r') as f:
+                        assets_data = json.load(f)
+                else:
+                    assets_data = {}
+
+                assets_data[position] = os.path.join("assets", new_filename)
+
+                with open(assets_json_path, 'w') as f:
+                    json.dump(assets_data, f, indent=4)
+
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to update Assets.json: {e}")
+                return
+
+            if texture:
+                self.default_size = (width, height)
+                self.textures[position] = texture
+                self.image_paths[position] = new_image_path
+                self.create_plane(position, width, height, texture)
             else:
-                assets_data = {}
+                width, height = self.default_size[0], self.default_size[1]
+                self.create_plane(position, width, height, None)
 
-            # Update the assets data with relative path
-            assets_data[position] = os.path.join("assets", new_filename)
+    def create_plane(self, position, width, height, texture):
+            plane_center = {
+                "floor": (0, 0, 0),
+                "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
+                "left":  (-self.default_size[0] / 2, 0, self.default_size[0]/2),
+                "back":  (0, -self.default_size[1] / 2, self.default_size[1] / 2),
+                "front": (0, self.default_size[1] / 2, self.default_size[1] / 2),
+            }
+            plane_direction = {
+                "floor": (0, 0, 1),
+                "right": (1, 0, 0),
+                "left": (1, 0, 0),
+                "back": (0, -1, 0),
+                "front": (0, 1, 0),
+            }
 
-            with open(assets_json_path, 'w') as f:
-                json.dump(assets_data, f, indent=4)
-                print(f"Assets.json updated with {position} image")
+            if position in plane_center and position in plane_direction:
+                i_resolution = width
+                j_resolution = height
 
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to update Assets.json: {e}")
-            return
+                plane = pv.Plane(
+                    center=plane_center[position],
+                    direction=plane_direction[position],
+                    i_size=width,
+                    j_size=height,
+                    i_resolution=i_resolution,
+                    j_resolution=j_resolution,
+                )
 
-        if texture:
-            self.default_size = (width, height) 
-            self.textures[position] = texture  
-            self.image_paths[position] = new_image_path  # Use the new image path
-            print(f"Loaded texture for {position}: {new_image_path}")
-        else:
-            width, height = self.default_size[0], self.default_size[1]
-            texture = None
-            if position not in self.image_paths:
-                self.image_paths[position] = None
-
-        plane_center = {
-            "floor": (0, 0, 0),
-            "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
-            "left":  (-self.default_size[0] / 2, 0, self.default_size[0]/2),
-            "back":  (0, -self.default_size[1] / 2, self.default_size[1] / 2),
-            "front": (0, self.default_size[1] / 2, self.default_size[1] / 2),
-        }
-        plane_direction = {
-            "floor": (0, 0, 1),
-            "right": (1, 0, 0),
-            "left": (1, 0, 0),
-            "back": (0, -1, 0),
-            "front": (0, 1, 0),
-        }
-
-        if position in plane_center and position in plane_direction:
-            i_resolution = width  
-            j_resolution = height 
-
-            plane = pv.Plane(
-                center=plane_center[position],
-                direction=plane_direction[position],
-                i_size=width,
-                j_size=height,  
-                i_resolution=i_resolution, 
-                j_resolution=j_resolution, 
-            )
-
-            if position == "back":
-                rotationAngle = -90
-                plane = plane.rotate_y(rotationAngle, point=plane_center[position])
-            elif position == "front":
-                rotationAngle = 90
-                plane = plane.rotate_y(rotationAngle, point=plane_center[position])
-                plane = plane.rotate_z(180 , point=plane_center[position])
-            elif position == "left":
-                plane.rotate_z(180)
-            self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
-
-    
+                if position == "back":
+                    rotationAngle = -90
+                    plane = plane.rotate_y(rotationAngle, point=plane_center[position])
+                elif position == "front":
+                    rotationAngle = 90
+                    plane = plane.rotate_y(rotationAngle, point=plane_center[position])
+                    plane = plane.rotate_z(180, point=plane_center[position])
+                elif position == "left":
+                    plane.rotate_z(180)
+                self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
+        
     def open_image_with_interaction(self):
         global active_folder
         position = self.texture_select.currentText().lower()
@@ -907,8 +926,8 @@ class MainWindow(QMainWindow):
             end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
 
         line = pv.Arrow(
-            start_point, 
             end_point, 
+            start_point, 
             tip_length=0.05,
             tip_radius=0.009, 
             tip_resolution=20,
