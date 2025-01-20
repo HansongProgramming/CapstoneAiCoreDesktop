@@ -1,5 +1,6 @@
 from imports import *
 
+
 if getattr(sys, 'frozen', False):
     import pyi_splash
 
@@ -926,8 +927,8 @@ class MainWindow(QMainWindow):
             end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
 
         line = pv.Arrow(
-            end_point, 
             start_point, 
+            end_point, 
             tip_length=0.05,
             tip_radius=0.009, 
             tip_resolution=20,
