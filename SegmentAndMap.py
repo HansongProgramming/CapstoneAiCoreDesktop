@@ -1,9 +1,9 @@
 import numpy as np
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QGraphicsView, 
                            QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem, 
-                           QPushButton, QLabel, QCheckBox)
+                           QPushButton, QLabel, QCheckBox, QProgressDialog)
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QImage
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QImage, QCursor
 from segment_anything import sam_model_registry, SamPredictor
 import os
 import math
@@ -39,6 +39,8 @@ class SegmentAndMap(QDialog):
         self.convergence_lines = []
         self.selection_rect = None
         self.analyzing = False  # Flag to prevent multiple simultaneous analyses
+        self.scale_factor = 1.0
+        self.space_pressed = False
         self.init_ui()
 
     def init_ui(self):
@@ -84,10 +86,24 @@ class SegmentAndMap(QDialog):
         self.start_point = None
         self.end_point = None
 
+        # Enable mouse tracking for the graphics view
+        self.graphics_view.setMouseTracking(True)
+        self.graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.graphics_view.setDragMode(QGraphicsView.NoDrag)
+        
         # Set up mouse events
         self.graphics_view.mousePressEvent = self.mouse_press_event
         self.graphics_view.mouseReleaseEvent = self.mouse_release_event
         self.graphics_view.mouseMoveEvent = self.mouse_move_event
+        self.graphics_view.wheelEvent = self.wheel_event
+        
+        # Set up keyboard events
+        self.graphics_view.keyPressEvent = self.key_press_event
+        self.graphics_view.keyReleaseEvent = self.key_release_event
+        
+        # Make graphics view focusable
+        self.graphics_view.setFocusPolicy(Qt.StrongFocus)
         
         # Load stylesheet
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
@@ -103,8 +119,32 @@ class SegmentAndMap(QDialog):
         with open(file_path, 'r') as f:
             return f.read()
 
+    def wheel_event(self, event):
+        if event.modifiers() == Qt.ControlModifier:
+            # Zoom
+            factor = 1.2 if event.angleDelta().y() > 0 else 1/1.2
+            self.scale_factor *= factor
+            self.graphics_view.scale(factor, factor)
+        else:
+            # Normal scroll
+            super(QGraphicsView, self.graphics_view).wheelEvent(event)
+
+    def key_press_event(self, event):
+        if event.key() == Qt.Key_Space:
+            self.space_pressed = True
+            self.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.graphics_view.setCursor(QCursor(Qt.OpenHandCursor))
+        super().keyPressEvent(event)
+
+    def key_release_event(self, event):
+        if event.key() == Qt.Key_Space:
+            self.space_pressed = False
+            self.graphics_view.setDragMode(QGraphicsView.NoDrag)
+            self.graphics_view.setCursor(QCursor(Qt.ArrowCursor))
+        super().keyReleaseEvent(event)
+
     def mouse_press_event(self, event):
-        if event.button() == Qt.LeftButton and not self.analyzing:
+        if event.button() == Qt.LeftButton and not self.analyzing and not self.space_pressed:
             self.start_point = self.graphics_view.mapToScene(event.pos())
             self.selection_rect = QGraphicsRectItem()
             self.selection_rect.setPen(QPen(Qt.red, 2, Qt.DashLine))
@@ -112,13 +152,13 @@ class SegmentAndMap(QDialog):
             self.scene.addItem(self.selection_rect)
 
     def mouse_move_event(self, event):
-        if self.start_point and not self.analyzing:
+        if self.start_point and not self.analyzing and not self.space_pressed:
             self.end_point = self.graphics_view.mapToScene(event.pos())
             rect = QRectF(self.start_point, self.end_point).normalized()
             self.selection_rect.setRect(rect)
 
     def mouse_release_event(self, event):
-        if self.start_point and self.selection_rect and not self.analyzing:
+        if self.start_point and self.selection_rect and not self.analyzing and not self.space_pressed:
             self.end_point = self.graphics_view.mapToScene(event.pos())
             rect = self.selection_rect.rect()
             
@@ -148,11 +188,17 @@ class SegmentAndMap(QDialog):
             self.analyzing = True
             self.analyze_button.setEnabled(False)
             
+            # Create progress dialog
+            progress = QProgressDialog("Analyzing selections...", None, 0, len(self.selection_boxes), self)
+            progress.setWindowModality(Qt.WindowModal)
+            progress.setMinimumDuration(0)
+            progress.setValue(0)
+            
             # Set image for predictor once
             self.predictor.set_image(self.image_np)
             
             # Process each selection box
-            for box in self.selection_boxes:
+            for i, box in enumerate(self.selection_boxes):
                 input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
                 input_box = torch.tensor(input_box, device=self.device)
                 
@@ -174,13 +220,16 @@ class SegmentAndMap(QDialog):
                 except Exception as e:
                     print(f"Error processing selection: {str(e)}")
                     continue
-                    
+                
+                progress.setValue(i + 1)
+                
         except Exception as e:
             print(f"Analysis error: {str(e)}")
         
         finally:
             self.analyzing = False
             self.clear_selections()
+            progress.close()
 
     def clear_selections(self):
         # Remove all selection rectangles from scene
