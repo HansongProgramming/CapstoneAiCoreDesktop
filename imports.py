@@ -1,30 +1,16 @@
-import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit,QFormLayout, QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QFileDialog, QLabel, QComboBox, QListWidget, QListWidgetItem, QVBoxLayout, QMessageBox
-from PyQt5.QtGui import QPixmap, QIcon,QIntValidator,QDoubleValidator,QFont
-import pyvista as pv
-from pyvistaqt import QtInteractor
-from PIL import Image
-from PyQt5.QtCore import Qt, pyqtSignal, QSize
-import json
-import numpy as np
-from SegmentAndMap import SegmentAndMap 
-import math
-from docx import Document
+from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit,QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QFileDialog, QLabel, QComboBox, QListWidget, QListWidgetItem, QVBoxLayout, QMessageBox,QWidget, QHBoxLayout, QPushButton, QLabel,QPushButton, QMenu,QFileDialog, QInputDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel
+from PyQt5.QtCore import QSize, Qt, QPoint,pyqtSignal
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from PyQt5.QtGui import QPixmap, QIcon, QImage
+from SegmentAndMap import SegmentAndMap 
+from pyvistaqt import QtInteractor
 from datetime import datetime
-import subprocess
-import os
+from docx import Document
+from PIL import Image
+import pyvista as pv
 import numpy as np
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem, QPushButton, QLabel, QCheckBox
-from PyQt5.QtCore import Qt, QRectF, pyqtSignal
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QImage
-from segment_anything import sam_model_registry, SamPredictor
-import torch
+import subprocess
+import json
+import math
 import sys
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel
-from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QPushButton, QMenu, QAction
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QSize
-from PyQt5.QtWidgets import QFileDialog, QInputDialog, QSplitter
+import os
