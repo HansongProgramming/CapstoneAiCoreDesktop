@@ -718,26 +718,28 @@ class MainWindow(QMainWindow):
                 i_resolution = width
                 j_resolution = height
 
-                plane = pv.Plane(
-                    center=plane_center[position],
-                    direction=plane_direction[position],
-                    i_size=width,
-                    j_size=height,
-                    i_resolution=i_resolution,
-                    j_resolution=j_resolution,
-                )
+                floor_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+                right_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+                left_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+                front_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+                back_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
 
                 if position == "back":
                     rotationAngle = -90
-                    plane = plane.rotate_y(rotationAngle, point=plane_center[position])
+                    back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
+                    self.plotter.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
                 elif position == "front":
                     rotationAngle = 90
-                    plane = plane.rotate_y(rotationAngle, point=plane_center[position])
-                    plane = plane.rotate_z(180, point=plane_center[position])
+                    fromt_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
+                    front_plane = front_plane.rotate_z(180, point=plane_center[position])
+                    self.plotter.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
                 elif position == "left":
-                    plane.rotate_z(180)
-                self.plotter.add_mesh(plane, texture=texture, name=f"{position}_plane")
-        
+                    left_plane.rotate_z(180)
+                    self.plotter.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
+                elif position == "right":
+                    self.plotter.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
+                elif position == "floor":
+                    self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane")        
     def open_image_with_interaction(self):
         global active_folder
         position = self.texture_select.currentText().lower()
