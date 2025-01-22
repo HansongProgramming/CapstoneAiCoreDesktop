@@ -343,38 +343,58 @@ class MainWindow(QMainWindow):
         self.selectspatter = QPixmap(self.get_resource_path("images/select spatter.png"))
         self.scaled_pixmap7 = self.selectspatter.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
 
+        self.assets_frame = QFrame()
+        self.assets_frame.setFrameShape(QFrame.StyledPanel)
+        self.assets_frame.setFrameShadow(QFrame.Raised)
+        self.assets_layout = QGridLayout(self.assets_frame)
+        self.sidebar_layout.addWidget(self.assets_frame)
+        
         self.Header3D = QLabel("3D Assets")
-        self.sidebar_layout.addWidget(self.Header3D)
+        self.assets_layout.addWidget(self.Header3D)
+        
         self.add_floor_btn = QPushButton("Floor")
         self.add_floor_btn.clicked.connect(lambda: self.add_plane_with_image("floor"))
         self.add_floor_btn.setIcon(QIcon(self.scaled_pixmap1))
         self.add_floor_btn.setIconSize(QSize(20,20))
-        self.sidebar_layout.addWidget(self.add_floor_btn)
 
         self.add_right_wall_btn = QPushButton("Right Wall")
         self.add_right_wall_btn.clicked.connect(lambda: self.add_plane_with_image("right"))
         self.add_right_wall_btn.setIcon(QIcon(self.scaled_pixmap2))
         self.add_right_wall_btn.setIconSize(QSize(20,20))
-        self.sidebar_layout.addWidget(self.add_right_wall_btn)
 
         self.add_left_wall_btn = QPushButton("Left Wall")
         self.add_left_wall_btn.clicked.connect(lambda: self.add_plane_with_image("left"))
         self.add_left_wall_btn.setIcon(QIcon(self.scaled_pixmap3))
         self.add_left_wall_btn.setIconSize(QSize(20,20))
-        self.sidebar_layout.addWidget(self.add_left_wall_btn)
 
         self.add_back_wall_btn = QPushButton("Back Wall")
         self.add_back_wall_btn.clicked.connect(lambda: self.add_plane_with_image("back"))
         self.add_back_wall_btn.setIcon(QIcon(self.scaled_pixmap4))
         self.add_back_wall_btn.setIconSize(QSize(20,20))
-        self.sidebar_layout.addWidget(self.add_back_wall_btn)
 
         self.add_front_wall_btn = QPushButton("Front Wall")
         self.add_front_wall_btn.clicked.connect(lambda: self.add_plane_with_image("front"))
         self.add_front_wall_btn.setIcon(QIcon(self.scaled_pixmap5))
         self.add_front_wall_btn.setIconSize(QSize(20,20))
-        self.sidebar_layout.addWidget(self.add_front_wall_btn)
+        
+        self.del_floor_btn = QPushButton("x")
+        self.del_floor_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["floor_plane"]))
+        self.del_right_wall_btn = QPushButton("x")
+        self.del_right_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["right_plane"]))
+        self.del_left_wall_btn = QPushButton("x")
+        self.del_left_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["left_plane"]))
+        self.del_back_wall_btn = QPushButton("x")
+        self.del_back_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["back_plane"]))
+        self.del_front_wall_btn = QPushButton("x")
+        self.del_front_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["front_plane"]))
+        
+        self.buttons = [ self.add_floor_btn, self.del_floor_btn, self.add_right_wall_btn, self.del_right_wall_btn, self.add_left_wall_btn, self.del_left_wall_btn, self.add_back_wall_btn, self.del_back_wall_btn, self.add_front_wall_btn, self.del_front_wall_btn ]
 
+        for i, button in enumerate(self.buttons):
+            row = i // 2
+            col = i % 2
+            self.assets_layout.addWidget(button, row, col)
+        
         self.add_points_btn = QPushButton("Add Points")
         self.add_points_btn.setIcon(QIcon(self.scaled_pixmap7))
         self.add_points_btn.setIconSize(QSize(20,20))
@@ -730,7 +750,7 @@ class MainWindow(QMainWindow):
                     self.plotter.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
                 elif position == "front":
                     rotationAngle = 90
-                    fromt_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
+                    front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
                     front_plane = front_plane.rotate_z(180, point=plane_center[position])
                     self.plotter.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
                 elif position == "left":
@@ -739,7 +759,11 @@ class MainWindow(QMainWindow):
                 elif position == "right":
                     self.plotter.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
                 elif position == "floor":
-                    self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane")        
+                    self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane")
+    
+    def delete_plane(self, plane):
+        self.plotter.remove_actor(plane)
+
     def open_image_with_interaction(self):
         global active_folder
         position = self.texture_select.currentText().lower()
