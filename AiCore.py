@@ -602,7 +602,7 @@ class MainWindow(QMainWindow):
     def open_blender_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Simulate", "", "Blender Files (*.blend)")
         if file_path:
-            blender_path = r"C:\Users\flore\Downloads\blender-3.0.0-windows-x64\blender-3.0.0-windows-x64\blender.exe"
+            blender_path = r"D:\Academics\CIT7\CapstoneAiCoreDesktop\blender\blender-3.6.0-windows-x64\blender.exe"
             try:
                 subprocess.run([blender_path, file_path])
             except Exception as e:
@@ -762,6 +762,23 @@ class MainWindow(QMainWindow):
                     self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane")
     
     def delete_plane(self, plane):
+        global active_folder
+        assets_json_path = os.path.join(active_folder, "Assets.json")
+        if os.path.exists(assets_json_path):
+            try:
+                with open(assets_json_path, 'r') as f:
+                    assets_data = json.load(f)
+                    for position, relative_path in assets_data.items():
+                        full_path = os.path.join(active_folder, relative_path)
+                        if full_path == self.image_paths.get(position):
+                            del assets_data[position]
+                            os.remove(full_path)
+                            break
+                with open(assets_json_path, 'w') as f:
+                    json.dump(assets_data, f, indent=4)
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to delete plane: {e}")
+                return
         self.plotter.remove_actor(plane)
 
     def open_image_with_interaction(self):
@@ -880,7 +897,7 @@ class MainWindow(QMainWindow):
             
         for segment in self.segments:
             self.generate_3d_line(segment)
-
+            
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
         self.angle = segment["angle"]
@@ -966,6 +983,7 @@ class MainWindow(QMainWindow):
         self.plotter.update()
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
+
 
     
     def generateReport(self):
