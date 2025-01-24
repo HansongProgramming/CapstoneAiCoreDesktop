@@ -600,13 +600,12 @@ class MainWindow(QMainWindow):
             self.generate_3d_line(segment)
 
     def open_blender_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Simulate", "", "Blender Files (*.blend)")
-        if file_path:
-            blender_path = r"D:\Academics\CIT7\CapstoneAiCoreDesktop\blender\blender-3.6.0-windows-x64\blender.exe"
-            try:
-                subprocess.run([blender_path, file_path])
-            except Exception as e:
-                QMessageBox.warning(self, "Error", f"Error opening Blender file: {e}")
+        file_path = r"AiCore.blend"
+        blender_path = r"blender\blender-3.6.0-windows-x64\blender.exe"
+        try:
+            subprocess.run([blender_path, file_path])
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error opening Blender file: {e}")
 
     def load_stylesheet(self, file_path):
         with open(file_path, 'r') as f:
