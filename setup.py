@@ -15,13 +15,22 @@ class DownloadProgressBar(tqdm):
 def download_file(url, target_path):
     try:
         print(f"Downloading file from {url}")
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        req = urllib.request.Request(url, headers=headers)
+        
         with DownloadProgressBar(unit='B', unit_scale=True, miniters=1, desc=target_path) as t:
-            urllib.request.urlretrieve(url, target_path, reporthook=t.update_to)
+            with urllib.request.urlopen(req) as response, open(target_path, 'wb') as out_file:
+                total_size = int(response.getheader('Content-Length', 0))
+                t.total = total_size
+                for data in iter(lambda: response.read(1024), b''):
+                    out_file.write(data)
+                    t.update(len(data))
         print("Download completed successfully")
         return True
     except Exception as e:
         print(f"Error downloading file: {e}")
         return False
+
 
 def extract_zip(zip_path, extract_path):
     try:
@@ -44,8 +53,8 @@ def setup_project():
     create_directories()
     
     files = {
-        "models/sam_vit_b_01ec64.pth": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth",
-        "blender/blender.zip": "https://download.blender.org/release/Blender3.6/blender-3.6.0-windows-x64.zip"
+        # "models/sam_vit_b_01ec64.pth": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth",
+        "blender/blender-3.6.0-windows-x64.zip": "https://download.blender.org/release/Blender3.6/blender-3.6.0-windows-x64.zip"
     }
     
     for target_path, url in files.items():
