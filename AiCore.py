@@ -342,16 +342,17 @@ class MainWindow(QMainWindow):
         self.scaled_pixmap6 = self.generateicon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.selectspatter = QPixmap(self.get_resource_path("images/select spatter.png"))
         self.scaled_pixmap7 = self.selectspatter.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        self.deletePlaneIcon = QPixmap(self.get_resource_path("images/delete.png"))
+        self.scaled_pixmap8 = self.deletePlaneIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
 
         self.assets_frame = QFrame()
-        self.assets_frame.setFrameShape(QFrame.StyledPanel)
-        self.assets_frame.setFrameShadow(QFrame.Raised)
+        self.assets_frame.setFrameStyle(QFrame.Raised)
         self.assets_layout = QGridLayout(self.assets_frame)
-        self.sidebar_layout.addWidget(self.assets_frame)
         
         self.Header3D = QLabel("3D Assets")
-        self.assets_layout.addWidget(self.Header3D)
-        
+        self.sidebar_layout.addWidget(self.Header3D)
+        self.sidebar_layout.addWidget(self.assets_frame)
+
         self.add_floor_btn = QPushButton("Floor")
         self.add_floor_btn.clicked.connect(lambda: self.add_plane_with_image("floor"))
         self.add_floor_btn.setIcon(QIcon(self.scaled_pixmap1))
@@ -377,24 +378,35 @@ class MainWindow(QMainWindow):
         self.add_front_wall_btn.setIcon(QIcon(self.scaled_pixmap5))
         self.add_front_wall_btn.setIconSize(QSize(20,20))
         
-        self.del_floor_btn = QPushButton("x")
+        self.del_floor_btn = QPushButton()
         self.del_floor_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["floor_plane"]))
-        self.del_right_wall_btn = QPushButton("x")
+        self.del_right_wall_btn = QPushButton()
         self.del_right_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["right_plane"]))
-        self.del_left_wall_btn = QPushButton("x")
+        self.del_left_wall_btn = QPushButton()
         self.del_left_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["left_plane"]))
-        self.del_back_wall_btn = QPushButton("x")
+        self.del_back_wall_btn = QPushButton()
         self.del_back_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["back_plane"]))
-        self.del_front_wall_btn = QPushButton("x")
+        self.del_front_wall_btn = QPushButton()
         self.del_front_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["front_plane"]))
         
-        self.buttons = [ self.add_floor_btn, self.del_floor_btn, self.add_right_wall_btn, self.del_right_wall_btn, self.add_left_wall_btn, self.del_left_wall_btn, self.add_back_wall_btn, self.del_back_wall_btn, self.add_front_wall_btn, self.del_front_wall_btn ]
+        self.asset_buttons = [ self.add_floor_btn, self.del_floor_btn, self.add_right_wall_btn, self.del_right_wall_btn, self.add_left_wall_btn, self.del_left_wall_btn, self.add_back_wall_btn, self.del_back_wall_btn, self.add_front_wall_btn, self.del_front_wall_btn ]
 
-        for i, button in enumerate(self.buttons):
+        for i, button in enumerate(self.asset_buttons):
             row = i // 2
             col = i % 2
+            if i % 2 != 0:
+                button.setFixedSize(QSize(20,20))
+                button.setIcon(QIcon(self.deletePlaneIcon))
             self.assets_layout.addWidget(button, row, col)
+            
+        self.analysis_label = QLabel("Analysis")
+        self.sidebar_layout.addWidget(self.analysis_label)
         
+        self.analysis_frame = QFrame()
+        self.analysis_frame.setFrameShape(QFrame.StyledPanel)
+        self.analysis_frame.setFrameShadow(QFrame.Raised)
+        self.analysis_layout = QGridLayout(self.analysis_frame)
+                
         self.add_points_btn = QPushButton("Add Points")
         self.add_points_btn.setIcon(QIcon(self.scaled_pixmap7))
         self.add_points_btn.setIconSize(QSize(20,20))
@@ -408,7 +420,14 @@ class MainWindow(QMainWindow):
         self.texture_select.addItem("Back")
         self.texture_select.addItem("Front")
         self.sidebar_layout.addWidget(self.texture_select)
+        
+        self.analysis_buttons = [self.add_points_btn, self.texture_select]
 
+        for i, button in enumerate(self.analysis_buttons):
+            self.analysis_layout.addWidget(button, 0, i)
+            
+        self.sidebar_layout.addWidget(self.analysis_frame)
+            
         self.sidebar_layout.addStretch()
 
         self.ObjectListLabel = QLabel("Spatters:")
@@ -1076,6 +1095,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", f"Failed to save report: {e}")
 
 if __name__ == "__main__":
+    
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
