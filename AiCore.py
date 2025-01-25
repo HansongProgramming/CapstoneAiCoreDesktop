@@ -515,6 +515,12 @@ class MainWindow(QMainWindow):
         self.report.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
         self.object_list.setEnabled(enabled)
+        self.del_floor_btn.setEnabled(enabled)
+        self.del_right_wall_btn.setEnabled(enabled)
+        self.del_left_wall_btn.setEnabled(enabled)
+        self.del_back_wall_btn.setEnabled(enabled)
+        self.del_front_wall_btn.setEnabled(enabled)
+        self.texture_select.setEnabled(enabled)
 
     def load_objects_from_json(self):
         global active_folder
