@@ -504,7 +504,6 @@ class MainWindow(QMainWindow):
             pyi_splash.close()
 
     def enableUI(self, enabled):
-        print("UI Enabled", enabled)
         self.add_floor_btn.setEnabled(enabled)
         self.add_right_wall_btn.setEnabled(enabled)
         self.add_left_wall_btn.setEnabled(enabled)
@@ -528,7 +527,6 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No active folder selected.")
 
         self.path = os.path.join(active_folder, "Data.json")
-        print(self.path)
         self.json_file = str(self.path)
         try:
             with open(self.json_file,'r') as file:
@@ -543,6 +541,7 @@ class MainWindow(QMainWindow):
         for i, segment in enumerate(self.segments):
             item = QListWidgetItem(f"Spatter {i+1}: {segment['angle']}")
             self.object_list.addItem(item)
+            
     def get_resource_path(self, relative_path):
         if getattr(sys, 'frozen', False): 
             base_path = sys._MEIPASS
@@ -597,7 +596,6 @@ class MainWindow(QMainWindow):
         for i, segment in enumerate(self.segments):
             color = "green" if i == index else "red"
             self.generate_3d_line(segment, color)
-
 
     def delete_selected_object(self):
         selected_items = self.object_list.selectedItems()
@@ -655,7 +653,6 @@ class MainWindow(QMainWindow):
                 with Image.open(file_path) as img:
                     width, height = img.size
                 texture = pv.read_texture(file_path)
-                print(f"Loaded texture from: {file_path}")  
                 return width, height, texture, file_path
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to load texture: {e}")
@@ -911,9 +908,8 @@ class MainWindow(QMainWindow):
                     
                     self.HeightReport.setText(f"Average Point of Origin: {round(avg_bz, 2)} mm {most_common_direction}")
                     
-                    print("Data updated from JSON file.")
                 else:
-                    print("No changes in the data.")
+                    QMessageBox.warning(self, "Error", "No changes detected in JSON file.")
         except FileNotFoundError:
             QMessageBox.warning(self, "Error", f"File {self.json_file} not found.")
         except json.JSONDecodeError:
@@ -954,9 +950,6 @@ class MainWindow(QMainWindow):
         Bxyz = math.sin(math.radians(angleInDeg))
         self.Bz = (Bxyz * Bxy)
 
-        start_point = np.array([Ax, Ay, Az])
-        end_point = np.array([Bx, By, abs(self.Bz)])
-
         dx = Bx - Ax
         dy = By - Ay
         if dx == 0 and dy == 0:
@@ -983,8 +976,6 @@ class MainWindow(QMainWindow):
             else:
                 self.direction = "East"
         
-        print(end_point)
-
         if orientation == "right":
             start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
             end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
@@ -999,7 +990,7 @@ class MainWindow(QMainWindow):
             end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
         elif orientation == "floor":
             start_point = np.array([Ax, Ay, Az])
-            end_point = np.array([-Bx, By, abs(self.Bz)])
+            end_point = np.array([Bx, By, abs(self.Bz)])
             
         line = pv.Arrow(
             start_point, 
@@ -1010,21 +1001,18 @@ class MainWindow(QMainWindow):
             shaft_radius=0.001,
             scale=self.default_size[0]
         )
-        print(end_point)
         self.plotter.add_mesh(line, color=color, line_width=3)
         self.plotter.update()
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
-
-    
     def generateReport(self):
         case_number = self.caseNumber.text()
         investigator_name = self.investigator.text()
         location = self.location.text()
 
         if not case_number or not investigator_name or not location:
-            print("Please fill in all the fields before generating the report.")
+            QMessageBox("Please fill in all the fields before generating the report.")
             return
 
         file_name = QFileDialog.getSaveFileName(self, "Save Report", "", "Word Document (*.docx)")[0]
@@ -1096,7 +1084,7 @@ class MainWindow(QMainWindow):
         # Save Document
         try:
             doc.save(file_name)
-            print(f"Report saved as {file_name}")
+            QMessageBox.information(self, "Success", "Report saved successfully.")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to save report: {e}")
 
