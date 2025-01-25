@@ -918,8 +918,13 @@ class MainWindow(QMainWindow):
 
         Bx = self.end_point2d[0] - image_width / 2
         By = -(self.end_point2d[1] - image_height / 2)
+        
+        initAx = Ax
+        initAy = Ay
+        initBx = Bx
+        initBy = By
 
-        Bxy = math.sqrt(((Bx - Ax) ** 2) + ((By - Ay) ** 2))
+        Bxy = math.sqrt(((initBx - (initAx))**2) + ((initBy - (initAy))**2))
         angleInDeg = self.angle
         Bxyz = math.sin(math.radians(angleInDeg))
         self.Bz = (Bxyz * Bxy)
@@ -967,7 +972,10 @@ class MainWindow(QMainWindow):
         elif orientation == "front":
             start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
             end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
-
+        elif orientation == "floor":
+            start_point = np.array([Ax, Ay, Az])
+            end_point = np.array([-Bx, By, abs(self.Bz)])
+            
         line = pv.Arrow(
             start_point, 
             end_point, 
