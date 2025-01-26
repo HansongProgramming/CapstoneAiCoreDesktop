@@ -427,7 +427,10 @@ class MainWindow(QMainWindow):
             self.analysis_layout.addWidget(button, 0, i)
             
         self.sidebar_layout.addWidget(self.analysis_frame)
-            
+        
+        self.add_head_btn = QPushButton("Add Head")
+        self.add_head_btn.clicked.connect(self.add_head)
+        self.sidebar_layout.addWidget(self.add_head_btn)
         self.sidebar_layout.addStretch()
 
         self.ObjectListLabel = QLabel("Spatters:")
@@ -747,6 +750,13 @@ class MainWindow(QMainWindow):
             width, height = self.default_size
             self.create_plane(position, width, height, None)
 
+    def add_head(self):
+        model = self.get_resource_path("figure/head.stl")
+        mesh = pv.read(model)
+        translation_vector = (0, 0, 0)
+        mesh.translate(translation_vector)
+        self.plotter.add_mesh(mesh, name="head")
+        
     def create_plane(self, position, width, height, texture):
             plane_center = {
                 "floor": (0, 0, 0),
@@ -845,7 +855,6 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
 
-    
     def update_from_interaction(self, json_data):
         self.load_objects_from_json()
         
