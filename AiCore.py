@@ -777,7 +777,7 @@ class MainWindow(QMainWindow):
         print(f"Average End Point: {self.average_end_point}")
         translation_vector = self.average_end_point
         head.translate(translation_vector,inplace=True)
-        # head.scale([5,5,5],inplace=True)
+        head.scale(5.0)
         self.plotter.add_mesh(head, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
         
     def create_plane(self, position, width, height, texture):
@@ -1019,6 +1019,7 @@ class MainWindow(QMainWindow):
             else:
                 self.direction = "East"
         
+        # Adjust start and end points based on orientation
         if orientation == "right":
             start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
             end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
@@ -1035,15 +1036,32 @@ class MainWindow(QMainWindow):
             start_point = np.array([Ax, Ay, Az])
             end_point = np.array([Bx, By, abs(self.Bz)])
 
+        # Create the line
         line = pv.Line(start_point, end_point)
 
-        self.plotter.add_mesh(line, color=color, line_width=3)
+        # Determine direction vector for the cone
+        direction_vector = np.array([Bx - Ax, By - Ay, self.Bz])
+        direction_vector = direction_vector / np.linalg.norm(direction_vector)  # Normalize to unit vector
+
+        # Define cone parameters
+        cone_height = 0.80  # How far behind the start point the base should be
+        cone_radius = 0.5  # Radius of the cone base
+
+        # Move the cone base a little behind the start point in the direction of the line
+        cone_base = start_point + direction_vector * cone_height
+
+        # Create the cone with apex at start_point and base at cone_base
+        cone = pv.Cone(center=start_point, direction=direction_vector, radius=cone_radius, height=cone_height)
+
+        # Add the line and cone to the plotter
+        self.plotter.add_mesh(line, color=color, line_width=1.4)
+        self.plotter.add_mesh(cone, color=color)
+
         self.plotter.update()
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
         self.end_points.append(end_point)
-
         self.average_end_point = np.mean(self.end_points, axis=0)
         
     def generateReport(self):
