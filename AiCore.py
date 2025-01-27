@@ -309,6 +309,8 @@ class MainWindow(QMainWindow):
         self.textures = {}
         self.image_paths = {}
         self.segments = []
+        self.end_points =[]
+        self.average_end_point = np.array([0.0, 0.0, 0.0])  
         self.previous_data = None  
 
         self.main_widget = QWidget()
@@ -771,10 +773,12 @@ class MainWindow(QMainWindow):
 
     def add_head(self):
         model = self.get_resource_path("figure/head.stl")
-        mesh = pv.read(model)
-        translation_vector = (0, 0, 0)
-        mesh.translate(translation_vector)
-        self.plotter.add_mesh(mesh, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
+        head = pv.read(model)
+        print(f"Average End Point: {self.average_end_point}")
+        translation_vector = self.average_end_point
+        head.translate(translation_vector,inplace=True)
+        # head.scale([5,5,5],inplace=True)
+        self.plotter.add_mesh(head, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
         
     def create_plane(self, position, width, height, texture):
             plane_center = {
@@ -961,7 +965,7 @@ class MainWindow(QMainWindow):
         self.spatterCount = segment["spatter_count"]
         self.end_point2d = segment["line_endpoints"]["negative_direction"]
         self.impact_angles = []
-        
+
         orientation = segment.get("origin", self.texture_select.currentText().lower())
 
         image_width = self.default_size[0]
@@ -1030,7 +1034,7 @@ class MainWindow(QMainWindow):
         elif orientation == "floor":
             start_point = np.array([Ax, Ay, Az])
             end_point = np.array([Bx, By, abs(self.Bz)])
-        
+
         line = pv.Line(start_point, end_point)
 
         self.plotter.add_mesh(line, color=color, line_width=3)
@@ -1038,6 +1042,10 @@ class MainWindow(QMainWindow):
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
+        self.end_points.append(end_point)
+
+        self.average_end_point = np.mean(self.end_points, axis=0)
+        
     def generateReport(self):
         case_number = self.caseNumber.text()
         investigator_name = self.investigator.text()
