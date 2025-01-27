@@ -505,6 +505,25 @@ class MainWindow(QMainWindow):
         self.init_plot()
         if getattr(sys, 'frozen', False):
             pyi_splash.close()
+            
+        self.configure_plotter()
+
+    def configure_plotter(self):
+
+        renderer = self.plotter.renderer
+        renderer.LightFollowCameraOff() 
+        renderer.remove_all_lights()
+
+        light1 = pv.Light(position=(10, 10, 10), focal_point=(0, 0, 0), intensity=1.0)
+        light2 = pv.Light(position=(-10, -10, 10), focal_point=(0, 0, 0), intensity=0.8)
+        renderer.add_light(light1)
+        renderer.add_light(light2)
+
+        # Set the background color
+        self.plotter.set_background("black")
+
+        # Render the scene
+        self.plotter.show()
 
     def enableUI(self, enabled):
         self.add_floor_btn.setEnabled(enabled)
@@ -755,7 +774,7 @@ class MainWindow(QMainWindow):
         mesh = pv.read(model)
         translation_vector = (0, 0, 0)
         mesh.translate(translation_vector)
-        self.plotter.add_mesh(mesh, name="head")
+        self.plotter.add_mesh(mesh, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
         
     def create_plane(self, position, width, height, texture):
             plane_center = {
@@ -1011,21 +1030,10 @@ class MainWindow(QMainWindow):
         elif orientation == "floor":
             start_point = np.array([Ax, Ay, Az])
             end_point = np.array([Bx, By, abs(self.Bz)])
-            
-        # arrow = pv.Arrow(
-        #     start_point, 
-        #     end_point,
-        #     tip_length=0.05,
-        #     tip_radius=0.009, 
-        #     tip_resolution=20,
-        #     shaft_radius=0.001,
-        #     scale=self.default_size[0] 
-        # )
         
         line = pv.Line(start_point, end_point)
 
         self.plotter.add_mesh(line, color=color, line_width=3)
-        # self.plotter.add_mesh(arrow, color=color, line_width=3)
         self.plotter.update()
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
