@@ -516,15 +516,13 @@ class MainWindow(QMainWindow):
         renderer.LightFollowCameraOff() 
         renderer.remove_all_lights()
 
-        light1 = pv.Light(position=(10, 10, 10), focal_point=(0, 0, 0), intensity=1.0)
-        light2 = pv.Light(position=(-10, -10, 10), focal_point=(0, 0, 0), intensity=0.8)
+        light1 = pv.Light(position=(0, 0, 10), focal_point=(0, 0, 0), intensity=1.0)
+        light2 = pv.Light(position=(0, -10, 10), focal_point=(0, 0, 0), intensity=0.8)
         renderer.add_light(light1)
         renderer.add_light(light2)
 
-        # Set the background color
-        self.plotter.set_background("black")
+        self.plotter.set_background("#3f3f3f")
 
-        # Render the scene
         self.plotter.show()
 
     def enableUI(self, enabled):
@@ -544,6 +542,7 @@ class MainWindow(QMainWindow):
         self.del_back_wall_btn.setEnabled(enabled)
         self.del_front_wall_btn.setEnabled(enabled)
         self.texture_select.setEnabled(enabled)
+        self.add_head_btn.setEnabled(enabled)
 
     def load_objects_from_json(self):
         global active_folder
@@ -689,14 +688,12 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No active folder selected.")
             return
 
-        # First check if image already exists in Assets.json
         assets_json_path = os.path.join(active_folder, "Assets.json")
         if os.path.exists(assets_json_path):
             try:
                 with open(assets_json_path, 'r') as f:
                     assets_data = json.load(f)
                     if position in assets_data:
-                        # Image already exists, load it directly
                         image_path = os.path.join(active_folder, assets_data[position])
                         if os.path.exists(image_path):
                             try:
@@ -713,12 +710,11 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
 
-        # If no existing image found, proceed with selecting new image
         width, height, texture, image_path = self.load_image()
         if not image_path:
             return
 
-        scale_factor = 0.5  # Downscale factor (50% of original size)
+        scale_factor = 0.2
         try:
             with Image.open(image_path) as img:
                 old_width, old_height = img.size
@@ -726,28 +722,20 @@ class MainWindow(QMainWindow):
                 new_height = int(old_height * scale_factor)
                 img_resized = img.resize((new_width, new_height))
 
-                # Create assets directory if it doesn't exist
                 assets_dir = os.path.join(active_folder, "assets")
                 os.makedirs(assets_dir, exist_ok=True)
 
-                # Create new filename based on position
                 _, ext = os.path.splitext(image_path)
                 new_filename = f"{position}{ext}"
                 new_image_path = os.path.join(assets_dir, new_filename)
 
-                # Save the downscaled image
                 img_resized.save(new_image_path)
 
-                # Print old and new sizes
-                print(f"Image downscaled: Old size = ({old_width}, {old_height}), New size = ({new_width}, {new_height})")
-
-                # Update default size
                 self.default_size = (new_width, new_height)
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to downscale image: {e}")
             return
 
-        # Update Assets.json
         try:
             if os.path.exists(assets_json_path):
                 with open(assets_json_path, 'r') as f:
@@ -774,7 +762,6 @@ class MainWindow(QMainWindow):
     def add_head(self):
         model = self.get_resource_path("figure/head.stl")
         head = pv.read(model)
-        print(f"Average End Point: {self.average_end_point}")
         translation_vector = self.average_end_point
         head.translate(translation_vector,inplace=True)
         head.scale(5.0)
@@ -984,9 +971,6 @@ class MainWindow(QMainWindow):
         initAy = Ay
         initBx = Bx
         initBy = By
-        
-        print(f"NStart : {initAx} , {initAy}")
-        print(f"NEnd: {Bx} , {By}")
 
         Bxy = math.sqrt(((initBx - (initAx))**2) + ((initBy - (initAy))**2))
         angleInDeg = self.angle
