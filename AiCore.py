@@ -1019,7 +1019,6 @@ class MainWindow(QMainWindow):
             else:
                 self.direction = "East"
         
-        # Adjust start and end points based on orientation
         if orientation == "right":
             start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
             end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
@@ -1036,28 +1035,21 @@ class MainWindow(QMainWindow):
             start_point = np.array([Ax, Ay, Az])
             end_point = np.array([Bx, By, abs(self.Bz)])
 
-        # Create the line
         line = pv.Line(start_point, end_point)
 
-        # Determine direction vector for the cone
-        direction_vector = np.array([Bx - Ax, By - Ay, self.Bz])
-        direction_vector = direction_vector / np.linalg.norm(direction_vector)  # Normalize to unit vector
+        direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
+        
+        cone_position = start_point  
+        cone_height = 50  
+        cone_radius = 10  
 
-        # Define cone parameters
-        cone_height = 0.80  # How far behind the start point the base should be
-        cone_radius = 0.5  # Radius of the cone base
+        cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
 
-        # Move the cone base a little behind the start point in the direction of the line
-        cone_base = start_point + direction_vector * cone_height
-
-        # Create the cone with apex at start_point and base at cone_base
-        cone = pv.Cone(center=start_point, direction=direction_vector, radius=cone_radius, height=cone_height)
-
-        # Add the line and cone to the plotter
         self.plotter.add_mesh(line, color=color, line_width=1.4)
         self.plotter.add_mesh(cone, color=color)
 
         self.plotter.update()
+
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
