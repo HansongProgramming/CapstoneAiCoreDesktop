@@ -467,7 +467,7 @@ class MainWindow(QMainWindow):
 
         self.simulate = QPushButton("Simulate")
         self.sidebar_layout.addWidget(self.simulate)
-        self.simulate.clicked.connect(self.open_blender_file)
+        self.simulate.clicked.connect(self.simulate_scene)
 
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")
@@ -498,9 +498,9 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.bottom_bar)
 
         self.enableUI(canEnable)
+        self.animation_window = None  # Placeholder for the animation window
 
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
-        self.init_plot()
         if getattr(sys, 'frozen', False):
             pyi_splash.close()
             
@@ -528,7 +528,7 @@ class MainWindow(QMainWindow):
         self.plotter.set_background("#3f3f3f")
         
         self.plotter.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane", lighting=False)
-
+        self.plotter.add_axes()
         self.plotter.show()
 
     def enableUI(self, enabled):
@@ -652,7 +652,7 @@ class MainWindow(QMainWindow):
             
         for segment in self.segments:
             self.generate_3d_line(segment)
-
+             
     def open_blender_file(self):
         file_path = r"AiCore.blend"
         blender_path = r"blender\blender-3.6.0-windows-x64\blender.exe"
@@ -664,11 +664,6 @@ class MainWindow(QMainWindow):
     def load_stylesheet(self, file_path):
         with open(file_path, 'r') as f:
             return f.read()
-    
-    def init_plot(self):
-        self.plotter.clear()
-        self.plotter.add_axes()
-        self.plotter.background_color = "#3f3f3f"
     
     def toggle_sidebar(self):
         if self.sidebar.isVisible():
@@ -1029,11 +1024,11 @@ class MainWindow(QMainWindow):
         
         cone_position = start_point  
         cone_height = 50  
-        cone_radius = 10  
+        cone_radius = 3
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
 
-        self.plotter.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=None,background_color=None,background_opacity=None,)
+        self.plotter.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2),background_color=None,background_opacity=0.2,)
         self.plotter.add_mesh(line, color=color, line_width=1.4)
         self.plotter.add_mesh(cone, color=color)
 
