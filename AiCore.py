@@ -516,12 +516,17 @@ class MainWindow(QMainWindow):
         renderer.LightFollowCameraOff() 
         renderer.remove_all_lights()
 
-        light1 = pv.Light(position=(0, 0, 10), focal_point=(0, 0, 0), intensity=1.0)
+        light1 = pv.Light(position=(0 - self.default_size[0]/2, 0, 10), focal_point=(0, 0, 0), intensity=1.0)
         light2 = pv.Light(position=(0, -10, 10), focal_point=(0, 0, 0), intensity=0.8)
         renderer.add_light(light1)
         renderer.add_light(light2)
-
+        
+        self.ground_plane = pv.Plane(i_size=self.default_size[0], j_size=self.default_size[1])
+        ground_texture = pv.read_texture(self.get_resource_path("images/ground.png"))
+        
         self.plotter.set_background("#3f3f3f")
+        
+        self.plotter.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane")
 
         self.plotter.show()
 
@@ -768,47 +773,47 @@ class MainWindow(QMainWindow):
         self.plotter.add_mesh(head, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
         
     def create_plane(self, position, width, height, texture):
-            plane_center = {
-                "floor": (0, 0, 0),
-                "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
-                "left":  (-self.default_size[0] / 2, 0, self.default_size[0]/2),
-                "back":  (0, -self.default_size[1] / 2, self.default_size[1] / 2),
-                "front": (0, self.default_size[1] / 2, self.default_size[1] / 2),
-            }
-            plane_direction = {
-                "floor": (0, 0, 1),
-                "right": (1, 0, 0),
-                "left": (1, 0, 0),
-                "back": (0, -1, 0),
-                "front": (0, 1, 0),
-            }
+        self.configure_plotter
+        plane_center = {
+            "floor": (0, 0, 0),
+            "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
+            "left":  (-self.default_size[0] / 2, 0, self.default_size[0]/2),
+            "back":  (0, -self.default_size[1] / 2, self.default_size[1] / 2),
+            "front": (0, self.default_size[1] / 2, self.default_size[1] / 2),
+        }
+        plane_direction = {
+            "floor": (0, 0, 1),
+            "right": (1, 0, 0),
+            "left": (1, 0, 0),
+            "back": (0, -1, 0),
+            "front": (0, 1, 0),
+        }
+        if position in plane_center and position in plane_direction:
+            i_resolution = width
+            j_resolution = height
 
-            if position in plane_center and position in plane_direction:
-                i_resolution = width
-                j_resolution = height
-
-                floor_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-                right_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-                left_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-                front_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-                back_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-
-                if position == "back":
-                    rotationAngle = -90
-                    back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
-                    self.plotter.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
-                elif position == "front":
-                    rotationAngle = 90
-                    front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
-                    front_plane = front_plane.rotate_z(180, point=plane_center[position])
-                    self.plotter.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
-                elif position == "left":
-                    left_plane.rotate_z(180)
-                    self.plotter.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
-                elif position == "right":
-                    self.plotter.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
-                elif position == "floor":
-                    self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane")
+            floor_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            right_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            left_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            front_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            back_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            
+            if position == "back":
+                rotationAngle = -90
+                back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
+                self.plotter.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
+            elif position == "front":
+                rotationAngle = 90
+                front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
+                front_plane = front_plane.rotate_z(180, point=plane_center[position])
+                self.plotter.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
+            elif position == "left":
+                left_plane.rotate_z(180)
+                self.plotter.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
+            elif position == "right":
+                self.plotter.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
+            elif position == "floor":
+                self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane")
     
     def delete_plane(self, plane):
         global active_folder
@@ -1128,3 +1133,4 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
+
