@@ -59,17 +59,14 @@ class MenuButton(QPushButton):
                 case_folder = os.path.join(folder_path, folder_name)
                 os.makedirs(case_folder, exist_ok=True)
                 
-                # Create Data.json
                 data_file = os.path.join(case_folder, "Data.json")
                 with open(data_file, 'w') as json_file:
                     json.dump([], json_file)
                 
-                # Create Assets.json
                 assets_file = os.path.join(case_folder, "Assets.json")
                 with open(assets_file, 'w') as json_file:
                     json.dump({}, json_file)
                 
-                # Create assets directory
                 os.makedirs(os.path.join(case_folder, "assets"), exist_ok=True)
                 
                 canEnable = True
@@ -82,14 +79,12 @@ class MenuButton(QPushButton):
                 active_folder = folder_path
                 self.main_window.enableUI(canEnable)
                 
-                # Load assets first
                 assets_file = os.path.join(active_folder, "Assets.json")
                 if os.path.exists(assets_file):
                     try:
                         with open(assets_file, 'r') as f:
                             assets_data = json.load(f)
                         
-                        # Load each plane with its image
                         for position, relative_path in assets_data.items():
                             full_path = os.path.join(active_folder, relative_path)
                             if os.path.exists(full_path):
@@ -102,12 +97,10 @@ class MenuButton(QPushButton):
                                 self.main_window.textures[position] = texture
                                 self.main_window.image_paths[position] = full_path
                                 
-                                # Add plane with loaded texture
                                 self.main_window.add_plane_with_image(position)
                     except Exception as e:
                         QMessageBox.warning(self, "Error", f"Failed to load assets: {e}")
                 
-                # Then load and plot the data
                 self.main_window.load_objects_from_json()
 
 class EditButton(QPushButton):
@@ -650,9 +643,10 @@ class MainWindow(QMainWindow):
             
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
-            if not actor.GetTexture():
-                actors_to_remove.append(actor)
-        
+            if isinstance(actor, vtk.vtkActor):
+                if not actor.GetTexture():
+                    actors_to_remove.append(actor)
+            
         for actor in actors_to_remove:
             self.plotter.renderer.RemoveActor(actor)
             
@@ -851,7 +845,6 @@ class MainWindow(QMainWindow):
         global active_folder
         position = self.texture_select.currentText().lower()
         
-        # Try to get image path from Assets.json first
         assets_json_path = os.path.join(active_folder, "Assets.json")
         if os.path.exists(assets_json_path):
             try:
@@ -870,7 +863,6 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
         
-        # Fallback to old behavior if Assets.json doesn't exist or doesn't have the image
         image_path = self.image_paths.get(position)
         if image_path:
             self.path = os.path.join(active_folder, "Data.json")
@@ -885,7 +877,6 @@ class MainWindow(QMainWindow):
     def update_from_interaction(self, json_data):
         self.load_objects_from_json()
         
-        # Clear existing lines
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
             if not actor.GetTexture():
@@ -901,18 +892,15 @@ class MainWindow(QMainWindow):
                     self.segments = current_data
                     self.previous_data = current_data
                     
-                    # Update information labels
                     total_spatters = sum(segment["spatter_count"] for segment in self.segments)
                     avg_angle = sum(segment["angle"] for segment in self.segments) / len(self.segments) if self.segments else 0
                     
                     self.stainCount.setText(f"Spatter Count: {total_spatters}")
                     self.AngleReport.setText(f"Average Impact Angle: {round(avg_angle, 2)}°")
                     
-                    # Calculate average point of origin
                     avg_bz = 0
                     directions = []
                     for segment in self.segments:
-                        # Calculate Bz for each segment
                         start = segment["center"]
                         end = segment["line_endpoints"]["negative_direction"]
                         dx = end[0] - start[0]
@@ -921,12 +909,10 @@ class MainWindow(QMainWindow):
                         bz = distance * math.sin(math.radians(segment["angle"]))
                         avg_bz += bz
                         
-                        # Get direction
                         angle = math.degrees(math.atan2(dy, dx))
                         if angle < 0:
                             angle += 360
                         
-                        # Map angle to direction
                         if 22.5 <= angle < 67.5:
                             directions.append("Northeast")
                         elif 67.5 <= angle < 112.5:
@@ -946,7 +932,6 @@ class MainWindow(QMainWindow):
                     
                     avg_bz = avg_bz / len(self.segments) if self.segments else 0
                     
-                    # Get most common direction
                     from collections import Counter
                     most_common_direction = Counter(directions).most_common(1)[0][0] if directions else "Unknown"
                     
@@ -1083,7 +1068,6 @@ class MainWindow(QMainWindow):
         doc.add_paragraph(f"Location of Incident: {location}")
         doc.add_paragraph(f"Date of Incident: {datetime.now().strftime('%Y-%m-%d')}")
 
-        # Other sections remain unchanged...
         doc.add_heading('1. Introduction', level=2)
         doc.add_paragraph("The purpose of this analysis is to evaluate the bloodstain patterns documented at the crime scene and provide insights regarding the events that occurred.")
 
@@ -1096,27 +1080,24 @@ class MainWindow(QMainWindow):
         doc.add_paragraph(f"Location: {round(abs(self.end_point2d[0]),2)} millimeters and {self.direction} {round(self.Bz,2)} millimeters off the {self.texture_select.currentText().lower()}")
 
         doc.add_heading('b. Impact Angles', level=3)
-        # Assuming self.impact_angles is a dictionary:
         if hasattr(self, 'impact_angles') and self.impact_angles:
-            # Categorize angles by certain ranges (e.g., Low, Medium, High)
             low_angles = [angle for angle in self.impact_angles if angle < 30]
             medium_angles = [angle for angle in self.impact_angles if 30 <= angle < 60]
             high_angles = [angle for angle in self.impact_angles if angle >= 60]
 
             if low_angles:
-                rounded_low_angles = [round(angle, 2) for angle in low_angles]  # Round each angle
+                rounded_low_angles = [round(angle, 2) for angle in low_angles] 
                 doc.add_paragraph(f"Low Impact Angles: {', '.join(map(str, rounded_low_angles))} degrees")
 
             if medium_angles:
-                rounded_medium_angles = [round(angle, 2) for angle in medium_angles]  # Round each angle
+                rounded_medium_angles = [round(angle, 2) for angle in medium_angles]  
                 doc.add_paragraph(f"Medium Impact Angles: {', '.join(map(str, rounded_medium_angles))} degrees")
 
             if high_angles:
-                rounded_high_angles = [round(angle, 2) for angle in high_angles]  # Round each angle
+                rounded_high_angles = [round(angle, 2) for angle in high_angles]  
                 doc.add_paragraph(f"High Impact Angles: {', '.join(map(str, rounded_high_angles))} degrees")
 
 
-        # Interpretation and Conclusions
         doc.add_heading('4. Interpretation', level=2)
         doc.add_paragraph("The data suggests a progression from low to medium bloodshed events. The patterns indicate possible blunt force trauma.")
 
@@ -1126,7 +1107,6 @@ class MainWindow(QMainWindow):
         doc.add_paragraph("2. The patterns indicate multiple mechanisms of bloodshed, progressing from low to medium velocity.")
         doc.add_paragraph("3. The findings are consistent with a violent altercation.")
 
-        # Expert's Statement
         doc.add_heading('6. Expert\'s Statement', level=2)
         doc.add_paragraph(f"I, {investigator_name}, certified Bloodstain Pattern Analyst, declare that this report is based on data "
                         "generated by the BPA system and my professional analysis. The conclusions presented are "
@@ -1135,7 +1115,6 @@ class MainWindow(QMainWindow):
         doc.add_paragraph(f"{investigator_name}")
         doc.add_paragraph("Certified Bloodstain Pattern Analyst")
 
-        # Save Document
         try:
             doc.save(file_name)
             QMessageBox.information(self, "Success", "Report saved successfully.")
