@@ -516,17 +516,22 @@ class MainWindow(QMainWindow):
         renderer.LightFollowCameraOff() 
         renderer.remove_all_lights()
 
-        light1 = pv.Light(position=(0 - self.default_size[0]/2, 0, 10), focal_point=(0, 0, 0), intensity=1.0)
-        light2 = pv.Light(position=(0, -10, 10), focal_point=(0, 0, 0), intensity=0.8)
+        light1 = pv.Light(position=((0-self.default_size[0]/2), 0, self.default_size[1]/2), focal_point=(0, 0, 0), intensity=1.0)
+        light2 = pv.Light(position=((self.default_size[0]), 0, self.default_size[1]/2), focal_point=(0, 0, 0), intensity=1.0)
+        light3 = pv.Light(position=(0, self.default_size[1], self.default_size[1]/2), focal_point=(0, 0, 0), intensity=1.0)
+        light4 = pv.Light(position=(0, (0-self.default_size[1]/2), self.default_size[1]/2), focal_point=(0, 0, 0), intensity=1.0)
+
         renderer.add_light(light1)
         renderer.add_light(light2)
+        renderer.add_light(light3)
+        renderer.add_light(light4)
         
-        self.ground_plane = pv.Plane(i_size=self.default_size[0], j_size=self.default_size[1])
+        self.ground_plane = pv.Plane(i_size=self.default_size[0] * 2, j_size=self.default_size[0]*2)
         ground_texture = pv.read_texture(self.get_resource_path("images/ground.png"))
         
         self.plotter.set_background("#3f3f3f")
         
-        self.plotter.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane")
+        self.plotter.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane", lighting=False)
 
         self.plotter.show()
 
@@ -773,7 +778,7 @@ class MainWindow(QMainWindow):
         self.plotter.add_mesh(head, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
         
     def create_plane(self, position, width, height, texture):
-        self.configure_plotter
+        self.configure_plotter()
         plane_center = {
             "floor": (0, 0, 0),
             "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
@@ -813,7 +818,7 @@ class MainWindow(QMainWindow):
             elif position == "right":
                 self.plotter.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
             elif position == "floor":
-                self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane")
+                self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane",lighting=False)
     
     def delete_plane(self, plane):
         global active_folder
@@ -833,6 +838,9 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to delete plane: {e}")
                 return
+        else:
+            QMessageBox.warning(self, "Error", "Assets.json not found.")
+            return
         self.plotter.remove_actor(plane)
 
     def open_image_with_interaction(self):
