@@ -212,6 +212,7 @@ class TitleBar(QWidget):
         self.minimize_btn.setIcon(QIcon(self.minimizeIcon))
         self.maximize_btn.setIcon(QIcon(self.maximizeIcon)) 
         self.close_btn.setIcon(QIcon(self.exitIcon))
+        self.placer = QLabel("AiCore x SpatterSense")
         
         for btn in (self.minimize_btn, self.maximize_btn, self.close_btn):
             btn.setFixedSize(50, 30)
@@ -243,6 +244,8 @@ class TitleBar(QWidget):
         self.layout.addWidget(self.AiCoreLabel)
         self.layout.addWidget(self.file_btn)
         self.layout.addWidget(self.edit_btn)
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.placer)
         self.layout.addStretch(1)
         self.layout.addWidget(self.minimize_btn)
         self.layout.addWidget(self.maximize_btn)
@@ -620,9 +623,10 @@ class MainWindow(QMainWindow):
         orientation = self.texture_select.currentText().lower()
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
-            if not actor.GetTexture():
-                actors_to_remove.append(actor)
-        
+            if isinstance(actor, vtk.vtkActor):
+                if not actor.GetTexture():
+                    actors_to_remove.append(actor)
+            
         for actor in actors_to_remove:
             self.plotter.renderer.RemoveActor(actor)
             
@@ -960,6 +964,7 @@ class MainWindow(QMainWindow):
             
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
+        self.label= segment["spatter_count"]
         self.angle = segment["angle"]
         self.start_point_2d = segment["center"]
         self.spatterCount = segment["spatter_count"]
@@ -1032,6 +1037,7 @@ class MainWindow(QMainWindow):
             start_point = np.array([Ax, Ay, Az])
             end_point = np.array([Bx, By, abs(self.Bz)])
 
+
         line = pv.Line(start_point, end_point)
 
         direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
@@ -1042,6 +1048,7 @@ class MainWindow(QMainWindow):
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
 
+        self.plotter.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=None,background_color=None,background_opacity=None,)
         self.plotter.add_mesh(line, color=color, line_width=1.4)
         self.plotter.add_mesh(cone, color=color)
 
