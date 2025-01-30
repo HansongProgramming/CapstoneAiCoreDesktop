@@ -77,22 +77,16 @@ To get started with AICore, follow these steps:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/AICore.git
+   git clone https://github.com/HansongProgramming/CapstoneAiCoreDesktop.git
    cd AICore
    ```
 
-2. **Set Up a Virtual Environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate   # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install Dependencies**
+2. **Install Dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Install Blender Python API**
+3. **Install Blender Python API**
    - Ensure Blender is installed ([Download Blender](https://www.blender.org/download/)).
    - Add the Blender Python API to your environment. Refer to Blender's [official documentation](https://docs.blender.org/api/current/) for setup instructions.
 
@@ -101,21 +95,16 @@ To get started with AICore, follow these steps:
 ## Usage
 
 1. **Input Crime Scene Data**
-   - Provide images or videos of the crime scene for analysis.
+   - Provide images of the crime scene for analysis.
 
 2. **Run AICore**
-   ```bash
-   python main.py --input path_to_data
-   ```
+   using AiCore.exe
 
 3. **View 3D Visualizations**
    - Access the generated 3D models and patterns via the PyVista interface.
 
 4. **Generate Reports**
-   - Automatically creates forensic reports with a single command:
-     ```bash
-     python generate_report.py --output report.pdf
-     ```
+   - Automatically creates forensic reports with single button press
 
 ---
 
@@ -159,8 +148,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Contact
 
 For questions or support, feel free to contact:
-- **Your Name**: [your.email@example.com](mailto:your.email@example.com)
-- GitHub: [github.com/yourusername](https://github.com/yourusername)
+- **HansongProgramming**: [hlf1850@students.uc-bcf.edu.ph](mailto:hlf1850@students.uc-bcf.edu.ph)
+- GitHub: [github.com/HansongProgramming](https://github.com/HansongProgramming)
 
 ---
 
