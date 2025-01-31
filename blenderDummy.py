@@ -64,35 +64,59 @@ else:
 
 # ! BRUSH PLANE
 
-bpy.ops.mesh.primitive_plane_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
-bpy.ops.transform.translate(value=(0, 0, 2.70914), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, False, True), mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False, release_confirm=True)
-bpy.ops.transform.rotate(value=2.1342, orient_axis='Y', orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False, release_confirm=True)
-bpy.ops.transform.rotate(value=3.14159, orient_axis='X', orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(True, False, False), mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
-bpy.ops.object.modifier_add(type='SUBSURF')
-bpy.data.particles["ParticleSettings.001"].render_type = 'OBJECT'
-bpy.context.object.modifiers["Subdivision"].levels = 8
-bpy.context.object.modifiers["Subdivision"].render_levels = 8
-bpy.ops.transform.resize(value=(0.145423, 0.145423, 0.145423), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
-bpy.ops.object.particle_system_add()
-bpy.data.particles["ParticleSettings.001"].display_size = 0.03
-bpy.data.particles["ParticleSettings.001"].normal_factor = 3
-bpy.data.particles["ParticleSettings.001"].factor_random = 3
-bpy.data.particles["ParticleSettings.001"].frame_end = 5
-bpy.data.particles["ParticleSettings.001"].count = 400
-bpy.ops.mesh.primitive_ico_sphere_add(radius=1, enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
-bpy.ops.object.shade_smooth()
-bpy.ops.transform.translate(value=(4.83279, 0, 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(True, False, False), mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False, release_confirm=True)
-bpy.ops.transform.resize(value=(0.106316, 0.106316, 0.106316), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
-bpy.data.particles["ParticleSettings.001"].instance_object = bpy.data.objects["Icosphere"]
-bpy.ops.object.modifier_add(type='DYNAMIC_PAINT')
-bpy.context.object.modifiers["Dynamic Paint"].ui_type = 'BRUSH'
-bpy.ops.dpaint.type_toggle(type='BRUSH')
-bpy.context.object.modifiers["Dynamic Paint"].brush_settings.paint_source = 'PARTICLE_SYSTEM'
-bpy.context.object.modifiers["Dynamic Paint"].brush_settings.particle_system = bpy.data.objects["particles"].particle_systems["ParticleSystem"]
-bpy.context.object.modifiers["Dynamic Paint"].brush_settings.solid_radius = 0.03
-bpy.context.object.modifiers["Dynamic Paint"].brush_settings.smooth_radius = 0
-bpy.context.object.modifiers["Dynamic Paint"].brush_settings.paint_color = (0.8, 0.0171646, 0)
+import bpy
 
+# Create a Plane
+bpy.ops.mesh.primitive_plane_add(size=2, enter_editmode=False, align='WORLD', location=(0, 0, 2.70914))
+plane = bpy.context.object
+
+# Rotate Plane
+plane.rotation_euler[1] = 2.1342  # Rotate around Y-axis
+plane.rotation_euler[0] = 3.14159  # Rotate around X-axis
+
+# Add Subdivision Surface Modifier
+subsurf = plane.modifiers.new(name="Subdivision", type='SUBSURF')
+subsurf.levels = 8
+subsurf.render_levels = 8
+
+# Add Particle System
+bpy.ops.object.particle_system_add()
+particle_system = plane.particle_systems[0]
+particle_settings = particle_system.settings
+particle_settings.render_type = 'OBJECT'
+particle_settings.display_size = 0.03
+particle_settings.normal_factor = 3
+particle_settings.factor_random = 3
+particle_settings.frame_end = 5
+particle_settings.count = 400
+
+# Resize Plane
+plane.scale = (0.145423, 0.145423, 0.145423)
+
+# Create an Icosphere (Particle Instance)
+bpy.ops.mesh.primitive_ico_sphere_add(radius=1, enter_editmode=False, align='WORLD', location=(4.83279, 0, 0))
+ico_sphere = bpy.context.object
+bpy.ops.object.shade_smooth()
+
+# Resize Icosphere
+ico_sphere.scale = (0.106316, 0.106316, 0.106316)
+
+# Assign Icosphere as Particle Instance Object
+particle_settings.instance_object = ico_sphere
+
+# Add Dynamic Paint Modifier and Set as Brush
+dp_brush = plane.modifiers.new(name="Dynamic Paint", type='DYNAMIC_PAINT')
+bpy.ops.dpaint.type_toggle(type='BRUSH')
+
+# Configure Dynamic Paint Brush
+dp_brush.ui_type = 'BRUSH'
+dp_brush.brush_settings.paint_source = 'PARTICLE_SYSTEM'
+dp_brush.brush_settings.particle_system = particle_system
+dp_brush.brush_settings.solid_radius = 0.03
+dp_brush.brush_settings.smooth_radius = 0
+dp_brush.brush_settings.paint_color = (0.8, 0.0171646, 0)
+
+print("✔ Successfully set up Particle Brush!")
 
 #! init scene
 bpy.context.scene.frame_end = 100
