@@ -1,24 +1,18 @@
 import bpy
 
-# Function to add the brush and canvas planes
 def add_actors(self, context):
-    # Create the "brush" collection if it doesn't exist
+    
     if "brush" not in bpy.data.collections:
         bpy.data.collections.new("brush")
 
-    # Get the brush collection
     brush_collection = bpy.data.collections["brush"]
 
-    # Link the brush collection to the scene collection for visibility in the Outliner
     if brush_collection.name not in bpy.context.scene.collection.children:
         bpy.context.scene.collection.children.link(brush_collection)
 
-
-    # Add Brush Plane code
     bpy.ops.mesh.primitive_plane_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
     brush_plane = bpy.context.object
 
-    # Move the Brush Plane to the "brush" collection
     brush_collection.objects.link(brush_plane)
 
     bpy.ops.transform.translate(value=(0, 0, 2.70914), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, False, True), mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False, release_confirm=True)
@@ -42,7 +36,7 @@ def add_actors(self, context):
     bpy.ops.transform.resize(value=(0.106316, 0.106316, 0.106316), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
 
     plane_object = bpy.data.objects["Plane"]
-    bpy.context.view_layer.objects.active = plane_object  # Set the active object to Plane
+    bpy.context.view_layer.objects.active = plane_object 
     bpy.data.particles["ParticleSettings"].instance_object = bpy.data.objects["Icosphere"]
 
     bpy.ops.object.modifier_add(type='DYNAMIC_PAINT')
@@ -55,7 +49,6 @@ def add_actors(self, context):
     bpy.context.object.modifiers["Dynamic Paint"].brush_settings.smooth_radius = 0
     bpy.context.object.modifiers["Dynamic Paint"].brush_settings.paint_color = (0.8, 0.0171646, 0)
 
-    # Add Canvas Plane code (the existing canvas setup)
     bpy.ops.mesh.primitive_plane_add(size=2, enter_editmode=False, align='WORLD', location=(0, 0, 0))
     canvas = bpy.context.object
 
@@ -103,11 +96,9 @@ def add_actors(self, context):
     else:
         print("⚠ Could not find the PROPERTIES area! bpy.ops.dpaint.output_toggle() may fail.")
 
-# Function to play the simulation (animation)
 def play_simulation(self, context):
     bpy.ops.screen.animation_play()
 
-# Panel UI class
 class SimplePanel(bpy.types.Panel):
     bl_label = "Simulation Controls"
     bl_idname = "PT_SimulationControls"
@@ -118,13 +109,10 @@ class SimplePanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
-        # Add Actors Button
         layout.operator("object.add_actors", text="Add Actors")
 
-        # Play Simulation Button
         layout.operator("screen.play_simulation", text="Play Simulation")
 
-# Operator to add actors
 class AddActorsOperator(bpy.types.Operator):
     bl_idname = "object.add_actors"
     bl_label = "Add Actors"
@@ -133,7 +121,6 @@ class AddActorsOperator(bpy.types.Operator):
         add_actors(self, context)
         return {'FINISHED'}
 
-# Operator to play simulation
 class PlaySimulationOperator(bpy.types.Operator):
     bl_idname = "screen.play_simulation"
     bl_label = "Play Simulation"
@@ -142,13 +129,11 @@ class PlaySimulationOperator(bpy.types.Operator):
         play_simulation(self, context)
         return {'FINISHED'}
 
-# Register classes
 def register():
     bpy.utils.register_class(SimplePanel)
     bpy.utils.register_class(AddActorsOperator)
     bpy.utils.register_class(PlaySimulationOperator)
 
-# Unregister classes
 def unregister():
     bpy.utils.unregister_class(SimplePanel)
     bpy.utils.unregister_class(AddActorsOperator)
