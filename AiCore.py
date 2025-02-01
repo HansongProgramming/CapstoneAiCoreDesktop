@@ -66,7 +66,7 @@ class MenuButton(QPushButton):
                 assets_file = os.path.join(case_folder, "Assets.json")
                 with open(assets_file, 'w') as json_file:
                     json.dump({}, json_file)
-                
+                    
                 os.makedirs(os.path.join(case_folder, "assets"), exist_ok=True)
                 
                 canEnable = True
@@ -653,14 +653,32 @@ class MainWindow(QMainWindow):
         for segment in self.segments:
             self.generate_3d_line(segment)
              
-    def open_blender_file(self):
-        file_path = r"AiCore.blend"
-        blender_path = r"blender\blender-3.6.0-windows-x64\blender.exe"
+    def simulate_scene(self):
+        global active_folder
+        if not active_folder:
+            QMessageBox.warning(self, "Error", "No active folder selected.")
+            return
+        
+        figure_blend = os.path.join("figure", "simulation.blend") 
+        target_blend = os.path.join(active_folder, "simulation.blend")  
+        figure_script = os.path.join("figure", "simulation.py")  
+        target_script = os.path.join(active_folder, "simulation.py") 
+        blender_exe = r"blender\blender-3.6.0-windows-x64\blender.exe"
+        
+        if not (os.path.exists(target_blend) and os.path.exists(target_script)):
+            try:
+                shutil.copy(figure_blend, target_blend)
+                shutil.copy(figure_script, target_script)
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to copy files: {e}")
+                return
+        
         try:
-            subprocess.run([blender_path, file_path])
+            subprocess.run([blender_exe, target_blend, "--python", target_script])
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Error opening Blender file: {e}")
+            QMessageBox.warning(self, "Error", f"Error running Blender: {e}")
 
+        
     def load_stylesheet(self, file_path):
         with open(file_path, 'r') as f:
             return f.read()
