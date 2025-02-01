@@ -662,13 +662,16 @@ class MainWindow(QMainWindow):
         figure_blend = os.path.join("figure", "simulation.blend") 
         target_blend = os.path.join(active_folder, "simulation.blend")  
         figure_script = os.path.join("figure", "simulation.py")  
-        target_script = os.path.join(active_folder, "simulation.py") 
+        target_script = os.path.join(active_folder, "simulation.py")
+        actor_script = os.path.join("figure", "Actor.py")
+        target_actor = os.path.join(active_folder, "Actor.py")
         blender_exe = r"blender\blender-3.6.0-windows-x64\blender.exe"
         
         if not (os.path.exists(target_blend) and os.path.exists(target_script)):
             try:
                 shutil.copy(figure_blend, target_blend)
                 shutil.copy(figure_script, target_script)
+                shutil.copy(actor_script,target_actor)
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to copy files: {e}")
                 return
@@ -677,7 +680,6 @@ class MainWindow(QMainWindow):
             subprocess.run([blender_exe, target_blend, "--python", target_script])
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error running Blender: {e}")
-
         
     def load_stylesheet(self, file_path):
         with open(file_path, 'r') as f:
