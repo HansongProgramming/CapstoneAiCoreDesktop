@@ -894,8 +894,9 @@ class MainWindow(QMainWindow):
         
         actors_to_remove = []
         for actor in self.plotter.renderer.actors.values():
-            if not actor.GetTexture():
-                actors_to_remove.append(actor)
+            if isinstance(actor, vtk.vtkActor):
+                if not actor.GetTexture():
+                    actors_to_remove.append(actor)
         
         for actor in actors_to_remove:
             self.plotter.renderer.RemoveActor(actor)
