@@ -1,133 +1,145 @@
 import sys
 import os
-import urllib.request
+import gdown
 import zipfile
-import shutil
-import winshell
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QFileDialog, QMessageBox, QProgressBar
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+                           QHBoxLayout, QPushButton, QLabel, QProgressBar, 
+                           QCheckBox, QFileDialog, QLineEdit)
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtGui import QPixmap
+class DownloaderThread(QThread):
+    progress = pyqtSignal(int)
+    finished = pyqtSignal()
+    error = pyqtSignal(str)
 
-class DownloadThread(QThread):
-    progress_signal = pyqtSignal(int)
-    finished_signal = pyqtSignal(bool)
-
-    def __init__(self, url, target_path):
+    def __init__(self, file_id, destination):
         super().__init__()
-        self.url = url
-        self.target_path = target_path
-    
+        self.file_id = file_id
+        self.destination = destination
+
     def run(self):
         try:
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            req = urllib.request.Request(self.url, headers=headers)
+            zip_path = os.path.join(self.destination, "download.zip")
             
-            with urllib.request.urlopen(req) as response, open(self.target_path, 'wb') as out_file:
-                total_size = int(response.getheader('Content-Length', 0))
-                downloaded = 0
-                chunk_size = 1024
-                
-                while True:
-                    chunk = response.read(chunk_size)
-                    if not chunk:
-                        break
-                    out_file.write(chunk)
-                    downloaded += len(chunk)
-                    percent = int((downloaded / total_size) * 100)
-                    self.progress_signal.emit(percent)
+            url = f"https://drive.google.com/uc?id={self.file_id}"
+            gdown.download(url, zip_path, quiet=False)
             
-            self.finished_signal.emit(True)
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(self.destination)
+            
+            os.remove(zip_path)
+            
+            self.progress.emit(100)  
+            self.finished.emit()
+            
         except Exception as e:
-            print(f"Error downloading file: {e}")
-            self.finished_signal.emit(False)
+            self.error.emit(str(e))
 
-def extract_zip(zip_path, extract_path):
-    try:
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_path)
-        return True
-    except Exception as e:
-        print(f"Error extracting file: {e}")
-        return False
-
-def create_directories():
-    directories = ['models', 'blender']
-    for directory in directories:
-        os.makedirs(directory, exist_ok=True)
-
-class InstallerGUI(QWidget):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
-    
+
     def initUI(self):
-        self.setWindowTitle("Python Installer GUI")
-        self.setGeometry(100, 100, 400, 250)
+        self.setWindowTitle('AiCore Installer')
+        self.setFixedSize(500, 200)
+
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+        layout = QVBoxLayout(main_widget)
         
-        layout = QVBoxLayout()
+        img_label = QLabel()
+        img_path = os.path.join('images', 'SplashScreen.png')
+
+        pixmap = QPixmap(img_path)
+        scaled_pixmap = pixmap.scaled(480, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        img_label.setPixmap(scaled_pixmap)
+        img_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(img_label)
+
+        location_layout = QHBoxLayout()
+        location_label = QLabel('Location:')
+        self.location_input = QLineEdit()
+        self.location_input.setReadOnly(True)
+        browse_button = QPushButton('Browse')
+        browse_button.clicked.connect(self.browse_location)
         
-        self.status_label = QLabel("Click Install to start the process.")
-        layout.addWidget(self.status_label)
+        location_layout.addWidget(location_label)
+        location_layout.addWidget(self.location_input)
+        location_layout.addWidget(browse_button)
+        layout.addLayout(location_layout)
+
+        # Progress section
+        progress_layout = QHBoxLayout()
+        self.start_button = QPushButton('Start')
+        self.start_button.clicked.connect(self.start_download)
+        self.start_button.setEnabled(False)
         
         self.progress_bar = QProgressBar()
-        self.progress_bar.setValue(0)
-        layout.addWidget(self.progress_bar)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setAlignment(Qt.AlignCenter)
         
-        self.install_button = QPushButton("Install")
-        self.install_button.clicked.connect(self.start_installation)
-        layout.addWidget(self.install_button)
-        
-        self.setLayout(layout)
-    
-    def start_installation(self):
-        base_dir = QFileDialog.getExistingDirectory(self, "Select Installation Directory")
-        if not base_dir:
-            QMessageBox.warning(self, "Warning", "Installation directory not selected.")
-            return
-        
-        os.makedirs(base_dir, exist_ok=True)
-        os.chdir(base_dir)
-        
-        self.download_files()
-    
-    def download_files(self):
-        self.status_label.setText("Downloading files...")
-        files = {
-            "models/sam_vit_b_01ec64.pth": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth",
-            "blender/blender-3.6.0-windows-x64.zip": "https://download.blender.org/release/Blender3.6/blender-3.6.0-windows-x64.zip"
-        }
-        
-        self.current_downloads = []
-        for target_path, url in files.items():
-            thread = DownloadThread(url, target_path)
-            thread.progress_signal.connect(self.progress_bar.setValue)
-            thread.finished_signal.connect(lambda success, path=target_path: self.handle_download_completion(success, path))
-            self.current_downloads.append(thread)
-            thread.start()
-    
-    def handle_download_completion(self, success, path):
-        if success:
-            if path.endswith('.zip'):
-                extract_dir = os.path.dirname(path)
-                if extract_zip(path, extract_dir):
-                    os.remove(path)
-        
-        if all(not t.isRunning() for t in self.current_downloads):
-            self.status_label.setText("Installation complete!")
-            self.create_shortcut(os.path.join(os.getcwd(), "blender", "blender.exe"), "Blender")
-            QMessageBox.information(self, "Success", "Installation complete!")
-    
-    def create_shortcut(self, target_path, shortcut_name):
-        if os.path.exists(target_path):
-            desktop = winshell.desktop()
-            shortcut_path = os.path.join(desktop, f"{shortcut_name}.lnk")
-            
-            with winshell.shortcut(shortcut_path) as shortcut:
-                shortcut.path = target_path
-                shortcut.description = "Shortcut to Installed Application"
-                shortcut.working_directory = os.path.dirname(target_path)
+        progress_layout.addWidget(self.start_button)
+        progress_layout.addWidget(self.progress_bar)
+        layout.addLayout(progress_layout)
 
-if __name__ == "__main__":
+        self.shortcut_checkbox = QCheckBox('Create desktop shortcut?')
+        layout.addWidget(self.shortcut_checkbox)
+
+        self.status_label = QLabel('')
+        self.status_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status_label)
+
+        self.show()
+
+    def browse_location(self):
+        folder = QFileDialog.getExistingDirectory(self, 'Select Destination Folder')
+        if folder:
+            self.location_input.setText(folder)
+            self.start_button.setEnabled(True)
+
+    def start_download(self):
+        if not self.location_input.text():
+            self.status_label.setText('Please select a destination folder first')
+            return
+
+        self.start_button.setEnabled(False)
+        self.progress_bar.setValue(0)
+        self.status_label.setText('Downloading...')
+
+        self.downloader = DownloaderThread('1LDmjCVwyybmjDWLVelE9TS398ndFys1w', 
+                                         self.location_input.text())
+        self.downloader.progress.connect(self.update_progress)
+        self.downloader.finished.connect(self.download_finished)
+        self.downloader.error.connect(self.download_error)
+        self.downloader.start()
+
+    def update_progress(self, value):
+        self.progress_bar.setValue(value)
+
+    def download_finished(self):
+        self.status_label.setText('Download and extraction completed!')
+        self.start_button.setEnabled(True)
+        
+        if self.shortcut_checkbox.isChecked():
+            self.create_desktop_shortcut()
+
+    def download_error(self, error_message):
+        self.status_label.setText(f'Error: {error_message}')
+        self.start_button.setEnabled(True)
+
+    def create_desktop_shortcut(self):
+        desktop_path = os.path.expanduser("~/Desktop")
+        shortcut_path = os.path.join(desktop_path, "Downloaded_Content.lnk")
+        
+        try:
+            with open(shortcut_path, 'w') as f:
+                f.write(f"[InternetShortcut]\nURL=file://{self.location_input.text()}")
+            self.status_label.setText('Download completed and shortcut created!')
+        except Exception as e:
+            self.status_label.setText(f'Shortcut creation failed: {str(e)}')
+
+if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = InstallerGUI()
-    window.show()
-    sys.exit(app.exec())
+    ex = MainWindow()
+    sys.exit(app.exec_())
