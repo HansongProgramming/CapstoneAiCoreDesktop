@@ -351,13 +351,23 @@ class SegmentAndMap(QDialog):
         return (end_x_pos, end_y_pos), (end_x_neg, end_y_neg)
 
     def update_json(self, segment_data):
+        highest_number = 0
+        
         if os.path.exists(self.json_file):
-            with open(self.json_file, "r") as file:
-                data = json.load(file)
+            try:
+                with open(self.json_file, "r") as file:
+                    data = json.load(file)
+                    if data: 
+                        highest_number = max(
+                            (item.get("segment_number", 0) for item in data),
+                            default=0
+                        )
+            except json.JSONDecodeError:
+                data = []
         else:
             data = []
 
-        segment_data["segment_number"] = len(data) + 1
+        segment_data["segment_number"] = highest_number + 1
         data.append(segment_data)
 
         with open(self.json_file, "w") as file:

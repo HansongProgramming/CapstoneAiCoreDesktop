@@ -964,7 +964,7 @@ class MainWindow(QMainWindow):
             
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
-        self.label= segment["spatter_count"]
+        self.label= segment["segment_number"]
         self.angle = segment["angle"]
         self.start_point_2d = segment["center"]
         self.spatterCount = segment["spatter_count"]
