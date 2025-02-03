@@ -294,19 +294,32 @@ class SegmentAndMap(QDialog):
         center_x = np.mean(x)
         center_y = np.mean(y)
 
-        max_dist = 0
-        max_angle = 0
-        for i in range(len(x)):
-            dx = x[i] - center_x
-            dy = y[i] - center_y
-            dist = np.sqrt(dx**2 + dy**2)
-            if dist > max_dist:
-                max_dist = dist
-                max_angle = math.atan2(dy, dx) * 180 / math.pi
+        # Calculate the covariance matrix of the points
+        points = np.column_stack((x - center_x, y - center_y))
+        covariance_matrix = np.cov(points.T)
 
-        return max_angle
+        # Get eigenvalues and eigenvectors
+        eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
+
+        # The eigenvector corresponding to the largest eigenvalue
+        # gives us the principal direction of the shape
+        major_axis = eigenvectors[:, 1]
+
+        # Calculate eccentricity to determine if the shape is circular
+        eccentricity = np.sqrt(1 - (eigenvalues[0] / eigenvalues[1]))
+
+        # If the shape is nearly circular (low eccentricity)
+        if eccentricity < 0.3:  # Threshold can be adjusted
+            # Return 0 degrees for circular shapes, resulting in 90-degree impact angle
+            return 0
+        else:
+            # Calculate angle from the major axis
+            angle = math.atan2(major_axis[1], major_axis[0]) * 180 / math.pi
+            return angle
 
     def calculate_impact_angle(self, angle):
+        # For circular shapes (angle = 0), this will return 90 degrees
+        # For other shapes, it calculates as before
         return 90 - angle
 
     def draw_convergence_line(self, center_x, center_y, angle):

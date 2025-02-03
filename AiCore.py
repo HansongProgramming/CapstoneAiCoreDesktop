@@ -498,7 +498,6 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.bottom_bar)
 
         self.enableUI(canEnable)
-        self.animation_window = None  # Placeholder for the animation window
 
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         if getattr(sys, 'frozen', False):
