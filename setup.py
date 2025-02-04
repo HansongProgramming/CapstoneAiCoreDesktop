@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
 class DownloaderThread(QThread):
     progress = pyqtSignal(int)
+    status_update = pyqtSignal(str)
     finished = pyqtSignal()
     error = pyqtSignal(str)
 
@@ -22,12 +23,22 @@ class DownloaderThread(QThread):
             zip_path = os.path.join(self.destination, "AiCore.zip")
             
             url = f"https://drive.google.com/uc?id={self.file_id}"
+            self.status_update.emit("Downloading") 
+            
+            def progress_callback(current,total):
+                percent = int((current/total)*100)
+                self.progress.emit(percent)
+                
             gdown.download(url, zip_path, quiet=False)
-            self.progress.emit(10)  
-
+            
+            self.progress.emit(0)
+            self.status_update.emit("Extracting")
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(self.destination)
-                self.progress.emit(60)  
+                file_count = len(zip_ref.namelist())
+                for i, file in enumerate(zip_ref.namelist()):
+                    zip_ref.extract(file, self.destination)
+                    progress = int(((i + 1)/file_count) * 100)
+                    self.progress.emit(progress)  
 
             os.remove(zip_path)
             
@@ -43,21 +54,21 @@ class MainWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setFixedSize(700, 420)
+        self.setFixedSize(550, 420)
         self.setWindowFlags(Qt.FramelessWindowHint)
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         layout = QHBoxLayout(main_widget)
+        layout.setContentsMargins(0, 0, 0, 0) 
+        layout.setSpacing(0)
         
+        left_Layout = QVBoxLayout()
+        right_Layout = QVBoxLayout()
+        right_Layout.setContentsMargins(10,5,10,0)
         
-        left_frame = QFrame()
-        right_frame = QFrame()
-        left_Layout = QVBoxLayout(left_frame)
-        right_Layout = QVBoxLayout(right_frame)
-        
-        layout.addWidget(left_frame)
-        layout.addWidget(right_frame)
+        layout.addLayout(left_Layout)
+        layout.addLayout(right_Layout)
         
         img_label = QLabel()
         img_path = os.path.join('images', 'Banner_Portrait.png')
@@ -68,16 +79,20 @@ class MainWindow(QMainWindow):
         img_label.setAlignment(Qt.AlignCenter)
         left_Layout.addWidget(img_label)
         
-        
         menu_layout = QHBoxLayout()
         menu_layout.addStretch()
-        self.exit_button = QPushButton("x")
+        self.exit_button = QPushButton("X")
+        self.exit_button.setFixedSize(20,20)
         self.exit_button.clicked.connect(lambda: self.exit())
         menu_layout.addWidget(self.exit_button)
         right_Layout.addLayout(menu_layout)
         
         right_Layout.addStretch()
-
+        
+        message = QLabel('Thank you for choosing AiCore!')
+        message.setStyleSheet("font-size:15px")
+        right_Layout.addWidget(message)
+        
         location_layout = QHBoxLayout()
         location_label = QLabel('Location:')
         self.location_input = QLineEdit()
@@ -104,6 +119,7 @@ class MainWindow(QMainWindow):
         progress_layout.addWidget(self.progress_bar)
         right_Layout.addLayout(progress_layout)
 
+        right_Layout.addStretch()
 
         self.shortcut_checkbox = QCheckBox('Create desktop shortcut?')
         right_Layout.addWidget(self.shortcut_checkbox)
