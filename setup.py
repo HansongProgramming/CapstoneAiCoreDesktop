@@ -4,7 +4,7 @@ import gdown
 import zipfile
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QLabel, QProgressBar, 
-                           QCheckBox, QFileDialog, QLineEdit)
+                           QCheckBox, QFileDialog, QLineEdit, QFrame)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
 class DownloaderThread(QThread):
@@ -19,14 +19,16 @@ class DownloaderThread(QThread):
 
     def run(self):
         try:
-            zip_path = os.path.join(self.destination, "download.zip")
+            zip_path = os.path.join(self.destination, "AiCore.zip")
             
             url = f"https://drive.google.com/uc?id={self.file_id}"
             gdown.download(url, zip_path, quiet=False)
-            
+            self.progress.emit(10)  
+
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(self.destination)
-            
+                self.progress.emit(60)  
+
             os.remove(zip_path)
             
             self.progress.emit(100)  
@@ -41,21 +43,40 @@ class MainWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('AiCore Installer')
-        self.setFixedSize(500, 200)
+        self.setFixedSize(700, 420)
+        self.setWindowFlags(Qt.FramelessWindowHint)
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
-        layout = QVBoxLayout(main_widget)
+        layout = QHBoxLayout(main_widget)
+        
+        
+        left_frame = QFrame()
+        right_frame = QFrame()
+        left_Layout = QVBoxLayout(left_frame)
+        right_Layout = QVBoxLayout(right_frame)
+        
+        layout.addWidget(left_frame)
+        layout.addWidget(right_frame)
         
         img_label = QLabel()
-        img_path = os.path.join('images', 'SplashScreen.png')
+        img_path = os.path.join('images', 'Banner_Portrait.png')
 
         pixmap = QPixmap(img_path)
-        scaled_pixmap = pixmap.scaled(480, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        scaled_pixmap = pixmap.scaled(300, 420, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         img_label.setPixmap(scaled_pixmap)
         img_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(img_label)
+        left_Layout.addWidget(img_label)
+        
+        
+        menu_layout = QHBoxLayout()
+        menu_layout.addStretch()
+        self.exit_button = QPushButton("x")
+        self.exit_button.clicked.connect(lambda: self.exit())
+        menu_layout.addWidget(self.exit_button)
+        right_Layout.addLayout(menu_layout)
+        
+        right_Layout.addStretch()
 
         location_layout = QHBoxLayout()
         location_label = QLabel('Location:')
@@ -67,9 +88,9 @@ class MainWindow(QMainWindow):
         location_layout.addWidget(location_label)
         location_layout.addWidget(self.location_input)
         location_layout.addWidget(browse_button)
-        layout.addLayout(location_layout)
-
-        # Progress section
+        right_Layout.addLayout(location_layout)
+        
+        
         progress_layout = QHBoxLayout()
         self.start_button = QPushButton('Start')
         self.start_button.clicked.connect(self.start_download)
@@ -81,17 +102,23 @@ class MainWindow(QMainWindow):
         
         progress_layout.addWidget(self.start_button)
         progress_layout.addWidget(self.progress_bar)
-        layout.addLayout(progress_layout)
+        right_Layout.addLayout(progress_layout)
+
 
         self.shortcut_checkbox = QCheckBox('Create desktop shortcut?')
-        layout.addWidget(self.shortcut_checkbox)
+        right_Layout.addWidget(self.shortcut_checkbox)
 
         self.status_label = QLabel('')
         self.status_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.status_label)
+        right_Layout.addWidget(self.status_label)
+
+        right_Layout.addStretch()
 
         self.show()
-
+        
+    def exit(self):
+        self.window().close()
+    
     def browse_location(self):
         folder = QFileDialog.getExistingDirectory(self, 'Select Destination Folder')
         if folder:
