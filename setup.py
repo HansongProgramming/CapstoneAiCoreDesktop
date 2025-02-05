@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                            QCheckBox, QFileDialog, QLineEdit)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
+import win32com.client
 
 class DownloaderThread(QThread):
     progress = pyqtSignal(int)
@@ -67,8 +68,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(right_layout)
         
         img_label = QLabel()
-        img_path = os.path.join('images', 'Banner_Portrait.png')
-        pixmap = QPixmap(img_path)
+        pixmap = QPixmap(self.get_resource_path("images/Banner_Portrait.png"))
         scaled_pixmap = pixmap.scaled(300, 420, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         img_label.setPixmap(scaled_pixmap)
         img_label.setAlignment(Qt.AlignCenter)
@@ -145,6 +145,13 @@ class MainWindow(QMainWindow):
         if folder:
             self.location_input.setText(folder)
             self.start_button.setEnabled(True if self.file_id else False)
+            
+    def get_resource_path(self, relative_path):
+        if getattr(sys, 'frozen', False): 
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, relative_path)
     
     def start_download(self):
         if not self.file_id:
@@ -176,16 +183,26 @@ class MainWindow(QMainWindow):
         self.start_button.setEnabled(True)
         
     def create_desktop_shortcut(self):
-        desktop_path = os.path.expanduser("~/Desktop")
-        shortcut_path = os.path.join(desktop_path, "Downloaded_Content.lnk")
-        
-        try:
-            with open(shortcut_path, 'w') as f:
-                f.write(f"[InternetShortcut]\nURL=file://{self.location_input.text()}")
-            self.status_label.setText('Download completed and shortcut created!')
-        except Exception as e:
-            self.status_label.setText(f'Shortcut creation failed: {str(e)}')
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        shortcut_path = os.path.join(desktop_path, "AiCore.lnk") 
 
+        target_exe = os.path.join(f"{self.location_input.text()}/AiCore", "AiCore.exe")
+
+        if not os.path.exists(target_exe):
+            self.status_label.setText("Shortcut creation failed: AiCore.exe not found!")
+            return
+
+        try:
+            shell = win32com.client.Dispatch("WScript.Shell")
+            shortcut = shell.CreateShortcut(shortcut_path)
+            shortcut.TargetPath = target_exe
+            shortcut.WorkingDirectory = os.path.dirname(target_exe)
+            shortcut.Save()
+
+            self.status_label.setText("Download completed and shortcut created!")
+        except Exception as e:
+            self.status_label.setText(f"Shortcut creation failed: {str(e)}")
+            
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = MainWindow()
