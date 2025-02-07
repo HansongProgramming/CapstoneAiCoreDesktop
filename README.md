@@ -10,9 +10,9 @@ Reburiano Augnina Krizel P.
   
 
 
-# AICore: AI for Bloodstain Pattern Analysis (BPA)
+# AiCore: Artificial Intelligence for Crimescene Observation and Reconstruction Enhancement.
 
-AICore is a cutting-edge AI-driven tool designed for bloodstain pattern analysis to automate calculations, crime scene recognition, and report generation. It leverages advanced 3D plotting, simulation, and AI technologies to assist forensic investigators in reconstructing crime scenes efficiently and accurately.
+AiCore is a cutting-edge AI-driven tool designed for bloodstain pattern analysis to automate calculations, crime scene reconstruction, and report generation. It leverages advanced 3D plotting, simulation, and computer vision technologies to assist forensic investigators in reconstructing crime scenes efficiently.
 
 ---
 
@@ -20,10 +20,7 @@ AICore is a cutting-edge AI-driven tool designed for bloodstain pattern analysis
 
 - **3D Bloodstain Pattern Visualization:**
   - Utilizes `PyVista` for detailed 3D plotting of bloodstain patterns.
-
-- **Simulation Tools:**
-  - Powered by Blender's Python API to simulate and analyze spatter patterns in crime scenes.
-
+  - 
 - **Spatter Calculation:**
   - Employs Meta's `Segment Anything` model to identify and calculate blood spatter patterns with precision.
 
@@ -59,7 +56,6 @@ Technologies used in the project:
 | Library/Framework | Purpose |
 |--------------------|---------|
 | **PyVista**        | 3D plotting and visualization of bloodstain patterns. |
-| **Blender Python** | Simulation and modeling of spatter patterns in 3D environments. |
 | **Segment Anything** | AI model for spatter segmentation and calculation. |
 | **OpenCV**         | Image processing for crime scene analysis. |
 | **PyTorch**        | Deep learning for pattern recognition and classification. |
@@ -75,20 +71,9 @@ Technologies used in the project:
 
 To get started with AICore, follow these steps:
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/HansongProgramming/CapstoneAiCoreDesktop.git
-   cd AICore
-   ```
+1. **Download the Setup.exe from the release**
 
-2. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Install Blender Python API**
-   - Ensure Blender is installed ([Download Blender](https://www.blender.org/download/)).
-   - Add the Blender Python API to your environment. Refer to Blender's [official documentation](https://docs.blender.org/api/current/) for setup instructions.
+2. **Run the Setup.exe**
 
 ---
 
@@ -111,11 +96,8 @@ To get started with AICore, follow these steps:
 ## Example Workflow
 
 1. Upload high-resolution images of the bloodstain patterns from the crime scene.
-2. Run the simulation in Blender to recreate the pattern's trajectories.
-3. Use AICore’s AI algorithms to segment, classify, and calculate blood spatter details.
-4. Visualize the findings in 3D.
-5. Generate a detailed report summarizing the findings, including visuals and key calculations.
-
+2. Select Blood spatters by Pressing Add Points
+3. Wait as the system analyzes the stains for you!
 ---
 
 ## Contributions
@@ -156,12 +138,14 @@ For questions or support, feel free to contact:
 ## Acknowledgments
 
 - **PyVista** for 3D plotting.
-- **Blender** for simulation capabilities.
 - **Segment Anything** by Meta for spatter segmentation.
+- **University of the Cordilleras - College of Information Technology and Computer Science**
+- **Wangal Regional Forensics Unit** by providing feedback.
+- **SpatterSense Thesis - UC-Forensics** for supporting the development.
 - The open-source community for making these technologies accessible.
 
 ---
 
-We hope AICore can assist forensic teams in solving crimes faster and more accurately!
+**Cre8Tive Sync** hopes AiCore can assist forensic teams in solving crimes faster and more accurately! 
 
 
