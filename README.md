@@ -20,7 +20,7 @@ AiCore is a cutting-edge AI-driven tool designed for bloodstain pattern analysis
 
 - **3D Bloodstain Pattern Visualization:**
   - Utilizes `PyVista` for detailed 3D plotting of bloodstain patterns.
-  - 
+    
 - **Spatter Calculation:**
   - Employs Meta's `Segment Anything` model to identify and calculate blood spatter patterns with precision.
 
