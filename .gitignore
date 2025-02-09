@@ -1,3 +1,4 @@
-#ignore blender
-blender/
 models/
+output/
+Deprecatedmedia/
+AiCore/
