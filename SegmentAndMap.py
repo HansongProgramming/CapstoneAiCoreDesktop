@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QGraphicsView,
 from PyQt5.QtCore import Qt, QRectF, pyqtSignal
 from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QImage, QCursor
 from segment_anything import sam_model_registry, SamPredictor
+from sklearn.cluster import DBSCAN
 import os
 import math
 import json
@@ -221,6 +222,97 @@ class SegmentAndMap(QDialog):
             self.clear_selections()
             progress.close()
 
+    def analyze_selections(self):
+        if self.analyzing or not self.selection_boxes:
+            return
+
+        try:
+            self.analyzing = True
+            self.analyze_button.setEnabled(False)
+            progress = QProgressDialog("Analyzing selections...", None, 0, len(self.selection_boxes), self)
+            progress.setWindowModality(Qt.WindowModal)
+            progress.setMinimumDuration(0)
+            progress.setValue(0)
+
+            self.predictor.set_image(self.image_np)
+
+            for i, box in enumerate(self.selection_boxes):
+                input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
+                input_box = torch.tensor(input_box, device=self.device)
+
+                masks, _, _ = self.predictor.predict(box=input_box[None, :].cpu().numpy(), multimask_output=False)
+
+                if masks is not None and len(masks) > 0:
+                    mask_item = self.display_mask(masks[0])
+                    if mask_item:
+                        self.segmented_masks.append(mask_item)
+                        impact_angle, segment_data = self.process_spatter(masks[0])
+                        self.update_json(segment_data)
+                        json_data = json.dumps(segment_data)
+                        self.dataUpdated.emit(json_data)
+
+                progress.setValue(i + 1)
+
+            self.draw_convergence_area()
+
+        except Exception as e:
+            print(f"Analysis error: {str(e)}")
+
+        finally:
+            self.analyzing = False
+            self.clear_selections()
+            progress.close()
+
+    def draw_convergence_area(self):
+        intersections = self.calculate_intersections()
+
+        if intersections:
+            intersections = np.array(intersections)
+            avg_x, avg_y = np.mean(intersections, axis=0)
+
+            radius = 20  # Adjust radius if needed
+            circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
+            circle.setPen(QPen(Qt.blue, 2))
+            circle.setBrush(QBrush(Qt.transparent))
+            circle.setZValue(3)
+            self.scene.addItem(circle)
+
+    def calculate_intersections(self):
+        intersections = []
+        lines = [line for pair in self.convergence_lines for line in pair]
+
+        for i in range(len(lines)):
+            for j in range(i + 1, len(lines)):
+                p1, p2 = lines[i].line().p1(), lines[i].line().p2()
+                p3, p4 = lines[j].line().p1(), lines[j].line().p2()
+
+                if self.is_intersecting(p1, p2, p3, p4):
+                    intersection_point = self.line_intersection((p1.x(), p1.y(), p2.x(), p2.y()),
+                                                                (p3.x(), p3.y(), p4.x(), p4.y()))
+                    if intersection_point:
+                        intersections.append(intersection_point)
+
+        return intersections
+
+    def is_intersecting(self, p1, p2, p3, p4):
+        def ccw(A, B, C):
+            return (C.y() - A.y()) * (B.x() - A.x()) > (B.y() - A.y()) * (C.x() - A.x())
+
+        return (ccw(p1, p3, p4) != ccw(p2, p3, p4)) and (ccw(p1, p2, p3) != ccw(p1, p2, p4))
+
+    def line_intersection(self, line1, line2):
+        x1, y1, x2, y2 = line1
+        x3, y3, x4, y4 = line2
+
+        denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+        if abs(denom) < 1e-10:
+            return None  # Lines are parallel or too close to parallel
+
+        intersect_x = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom
+        intersect_y = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
+
+        return intersect_x, intersect_y
+
     def clear_selections(self):
         # Remove all selection rectangles from scene
         for rect in self.selection_rects:
@@ -308,8 +400,6 @@ class SegmentAndMap(QDialog):
             return angle
 
     def calculate_impact_angle(self, angle):
-        # For circular shapes (angle = 0), this will return 90 degrees
-        # For other shapes, it calculates as before
         return 90 - angle
     
     def draw_convergence_area(self):
@@ -319,7 +409,7 @@ class SegmentAndMap(QDialog):
             avg_x = np.mean([point[0] for point in intersections])
             avg_y = np.mean([point[1] for point in intersections])
 
-            radius = 20  # Set a fixed radius or calculate dynamically if needed
+            radius = 20 
             circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
             circle.setPen(QPen(Qt.blue, 2))
             circle.setBrush(QBrush(Qt.transparent))

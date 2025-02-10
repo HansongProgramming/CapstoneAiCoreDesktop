@@ -173,7 +173,7 @@ class TitleBar(QWidget):
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
-        self.title = QLabel("AiCore x SpatterSense")
+        self.title = QLabel("SpatterSense By AiCore")
         self.title.setStyleSheet("color: white; font-size: 12px;")
 
         self.AiCoreLabel = QLabel()
