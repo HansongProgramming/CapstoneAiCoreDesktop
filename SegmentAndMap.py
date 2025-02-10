@@ -1,9 +1,10 @@
 import numpy as np
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QGraphicsView, 
                            QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem, 
-                           QPushButton, QLabel, QCheckBox, QProgressDialog,QGraphicsEllipseItem)
-from PyQt5.QtCore import Qt, QRectF, pyqtSignal
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QImage, QCursor
+                           QPushButton, QLabel, QCheckBox, QProgressDialog,
+                           QGraphicsEllipseItem, QFileDialog,)
+from PyQt5.QtCore import Qt, QRectF, pyqtSignal, QLineF, QPointF
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QImage, QCursor, QColor
 from segment_anything import sam_model_registry, SamPredictor
 from sklearn.cluster import DBSCAN
 import os
@@ -22,24 +23,22 @@ class SegmentAndMap(QDialog):
         self.image_path = image_path
         self.model_path = os.path.abspath(self.get_resource_path('models/sam_vit_b_01ec64.pth'))
         
-        # Initialize device
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {self.device}")
         
-        # Load model and move to appropriate device
         self.sam_model = sam_model_registry['vit_b'](checkpoint=self.model_path)
         self.sam_model.to(device=self.device)
         self.predictor = SamPredictor(self.sam_model)
         
         self.image_label = QLabel(self)
         self.segmented_masks = []
-        self.selection_boxes = []  # Store selection boxes
-        self.selection_rects = []  # Store QGraphicsRectItems
+        self.selection_boxes = []  
+        self.selection_rects = []  
         self.mask_item = None
         self.is_ai_select = False
         self.convergence_lines = []
         self.selection_rect = None
-        self.analyzing = False  # Flag to prevent multiple simultaneous analyses
+        self.analyzing = False  
         self.scale_factor = 1.0
         self.space_pressed = False
         self.init_ui()
@@ -47,37 +46,34 @@ class SegmentAndMap(QDialog):
     def init_ui(self):
         self.layout = QVBoxLayout(self)
         print(f"Running on: {self.device}")
-        
-        # Create button layout
         button_layout = QHBoxLayout()
         
-        # Create analyze button
         self.analyze_button = QPushButton("Analyze Selections", self)
         self.analyze_button.clicked.connect(self.analyze_selections)
-        self.analyze_button.setEnabled(False)  # Disabled until selections are made
+        self.analyze_button.setEnabled(False) 
         button_layout.addWidget(self.analyze_button)
 
-        # Create clear button
         self.clear_button = QPushButton("Clear All", self)
         self.clear_button.clicked.connect(self.clear_selections)
         button_layout.addWidget(self.clear_button)
+        
+        self.export_button = QPushButton("Export Scene", self)
+        self.export_button.clicked.connect(self.export_scene)
+        button_layout.addWidget(self.export_button)
 
         self.layout.addLayout(button_layout)
 
-        # Set up graphics view
         self.graphics_view = QGraphicsView(self)
         self.layout.addWidget(self.graphics_view)
 
         self.scene = QGraphicsScene(self)
         self.graphics_view.setScene(self.scene)
 
-        # Load and display image
         self.pixmap = QPixmap(self.image_path)
         self.image_item = QGraphicsPixmapItem(self.pixmap)
         self.image_item.setZValue(0)
         self.scene.addItem(self.image_item)
 
-        # Convert image for processing
         img = self.pixmap.toImage()
         ptr = img.bits()
         ptr.setsize(img.byteCount())
@@ -87,27 +83,48 @@ class SegmentAndMap(QDialog):
         self.start_point = None
         self.end_point = None
 
-        # Enable mouse tracking for the graphics view
         self.graphics_view.setMouseTracking(True)
         self.graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.graphics_view.setDragMode(QGraphicsView.NoDrag)
         
-        # Set up mouse events
         self.graphics_view.mousePressEvent = self.mouse_press_event
         self.graphics_view.mouseReleaseEvent = self.mouse_release_event
         self.graphics_view.mouseMoveEvent = self.mouse_move_event
         self.graphics_view.wheelEvent = self.wheel_event
         
-        # Set up keyboard events
         self.graphics_view.keyPressEvent = self.key_press_event
         self.graphics_view.keyReleaseEvent = self.key_release_event
         
-        # Make graphics view focusable
         self.graphics_view.setFocusPolicy(Qt.StrongFocus)
         
-        # Load stylesheet
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
+        
+    def export_scene(self):
+        """Export the entire scene as a PNG image."""
+        scene_rect = self.scene.sceneRect()
+        
+        image = QImage(int(scene_rect.width()), int(scene_rect.height()), QImage.Format_ARGB32)
+        image.fill(Qt.transparent)
+        
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        self.scene.render(painter, QRectF(image.rect()), scene_rect)
+        painter.end()
+        
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Scene",
+            "",
+            "PNG Files (*.png);;All Files (*)"
+        )
+        
+        if file_path:
+            if not file_path.lower().endswith('.png'):
+                file_path += '.png'
+            
+            image.save(file_path)
 
     def get_resource_path(self, relative_path):
         if getattr(sys, 'frozen', False):
@@ -122,12 +139,10 @@ class SegmentAndMap(QDialog):
 
     def wheel_event(self, event):
         if event.modifiers() == Qt.ControlModifier:
-            # Zoom
             factor = 1.2 if event.angleDelta().y() > 0 else 1/1.2
             self.scale_factor *= factor
             self.graphics_view.scale(factor, factor)
         else:
-            # Normal scroll
             super(QGraphicsView, self.graphics_view).wheelEvent(event)
 
     def key_press_event(self, event):
@@ -163,7 +178,6 @@ class SegmentAndMap(QDialog):
             self.end_point = self.graphics_view.mapToScene(event.pos())
             rect = self.selection_rect.rect()
             
-            # Store the selection box coordinates
             selection_box = {
                 'x1': int(rect.left()),
                 'y1': int(rect.top()),
@@ -173,10 +187,8 @@ class SegmentAndMap(QDialog):
             self.selection_boxes.append(selection_box)
             self.selection_rects.append(self.selection_rect)
             
-            # Enable analyze button when there are selections
             self.analyze_button.setEnabled(True)
             
-            # Reset for next selection
             self.selection_rect = None
             self.start_point = None
             self.end_point = None
@@ -222,107 +234,13 @@ class SegmentAndMap(QDialog):
             self.clear_selections()
             progress.close()
 
-    def analyze_selections(self):
-        if self.analyzing or not self.selection_boxes:
-            return
-
-        try:
-            self.analyzing = True
-            self.analyze_button.setEnabled(False)
-            progress = QProgressDialog("Analyzing selections...", None, 0, len(self.selection_boxes), self)
-            progress.setWindowModality(Qt.WindowModal)
-            progress.setMinimumDuration(0)
-            progress.setValue(0)
-
-            self.predictor.set_image(self.image_np)
-
-            for i, box in enumerate(self.selection_boxes):
-                input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
-                input_box = torch.tensor(input_box, device=self.device)
-
-                masks, _, _ = self.predictor.predict(box=input_box[None, :].cpu().numpy(), multimask_output=False)
-
-                if masks is not None and len(masks) > 0:
-                    mask_item = self.display_mask(masks[0])
-                    if mask_item:
-                        self.segmented_masks.append(mask_item)
-                        impact_angle, segment_data = self.process_spatter(masks[0])
-                        self.update_json(segment_data)
-                        json_data = json.dumps(segment_data)
-                        self.dataUpdated.emit(json_data)
-
-                progress.setValue(i + 1)
-
-            self.draw_convergence_area()
-
-        except Exception as e:
-            print(f"Analysis error: {str(e)}")
-
-        finally:
-            self.analyzing = False
-            self.clear_selections()
-            progress.close()
-
-    def draw_convergence_area(self):
-        intersections = self.calculate_intersections()
-
-        if intersections:
-            intersections = np.array(intersections)
-            avg_x, avg_y = np.mean(intersections, axis=0)
-
-            radius = 20  # Adjust radius if needed
-            circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
-            circle.setPen(QPen(Qt.blue, 2))
-            circle.setBrush(QBrush(Qt.transparent))
-            circle.setZValue(3)
-            self.scene.addItem(circle)
-
-    def calculate_intersections(self):
-        intersections = []
-        lines = [line for pair in self.convergence_lines for line in pair]
-
-        for i in range(len(lines)):
-            for j in range(i + 1, len(lines)):
-                p1, p2 = lines[i].line().p1(), lines[i].line().p2()
-                p3, p4 = lines[j].line().p1(), lines[j].line().p2()
-
-                if self.is_intersecting(p1, p2, p3, p4):
-                    intersection_point = self.line_intersection((p1.x(), p1.y(), p2.x(), p2.y()),
-                                                                (p3.x(), p3.y(), p4.x(), p4.y()))
-                    if intersection_point:
-                        intersections.append(intersection_point)
-
-        return intersections
-
-    def is_intersecting(self, p1, p2, p3, p4):
-        def ccw(A, B, C):
-            return (C.y() - A.y()) * (B.x() - A.x()) > (B.y() - A.y()) * (C.x() - A.x())
-
-        return (ccw(p1, p3, p4) != ccw(p2, p3, p4)) and (ccw(p1, p2, p3) != ccw(p1, p2, p4))
-
-    def line_intersection(self, line1, line2):
-        x1, y1, x2, y2 = line1
-        x3, y3, x4, y4 = line2
-
-        denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
-        if abs(denom) < 1e-10:
-            return None  # Lines are parallel or too close to parallel
-
-        intersect_x = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom
-        intersect_y = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
-
-        return intersect_x, intersect_y
-
     def clear_selections(self):
-        # Remove all selection rectangles from scene
         for rect in self.selection_rects:
             self.scene.removeItem(rect)
         
-        # Clear all stored selections
         self.selection_boxes.clear()
         self.selection_rects.clear()
         
-        # Disable analyze button
         self.analyze_button.setEnabled(False)
 
     def display_mask(self, mask):
@@ -353,8 +271,6 @@ class SegmentAndMap(QDialog):
 
         impact_angle = self.calculate_impact_angle(angle)
 
-        print(f"Impact Angle: {impact_angle}")
-
         num_spatters = len(self.segmented_masks)
 
         origin_plane = self.parent().texture_select.currentText().lower()
@@ -376,26 +292,18 @@ class SegmentAndMap(QDialog):
         center_x = np.mean(x)
         center_y = np.mean(y)
 
-        # Calculate the covariance matrix of the points
         points = np.column_stack((x - center_x, y - center_y))
         covariance_matrix = np.cov(points.T)
 
-        # Get eigenvalues and eigenvectors
         eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
 
-        # The eigenvector corresponding to the largest eigenvalue
-        # gives us the principal direction of the shape
         major_axis = eigenvectors[:, 1]
 
-        # Calculate eccentricity to determine if the shape is circular
         eccentricity = np.sqrt(1 - (eigenvalues[0] / eigenvalues[1]))
 
-        # If the shape is nearly circular (low eccentricity)
-        if eccentricity < 0.3:  # Threshold can be adjusted
-            # Return 0 degrees for circular shapes, resulting in 90-degree impact angle
+        if eccentricity < 0.3: 
             return 0
         else:
-            # Calculate angle from the major axis
             angle = math.atan2(major_axis[1], major_axis[0]) * 180 / math.pi
             return angle
 
@@ -406,15 +314,29 @@ class SegmentAndMap(QDialog):
         intersections = self.calculate_intersections()
 
         if intersections:
-            avg_x = np.mean([point[0] for point in intersections])
-            avg_y = np.mean([point[1] for point in intersections])
+            # Convert intersections to numpy array
+            points = np.array(intersections)
 
-            radius = 20 
-            circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
-            circle.setPen(QPen(Qt.blue, 2))
-            circle.setBrush(QBrush(Qt.transparent))
-            circle.setZValue(3)
-            self.scene.addItem(circle)
+            # Apply DBSCAN clustering to find dense clusters of intersection points
+            clustering = DBSCAN(eps=20, min_samples=2).fit(points)
+            labels = clustering.labels_
+
+            # Find the largest cluster (excluding noise points labeled as -1)
+            unique_labels, counts = np.unique(labels[labels != -1], return_counts=True)
+            if unique_labels.size > 0:
+                max_cluster_label = unique_labels[np.argmax(counts)]
+                cluster_points = points[labels == max_cluster_label]
+
+                # Compute the centroid of the most intersected cluster
+                avg_x, avg_y = np.mean(cluster_points, axis=0)
+
+                # Draw a bigger circle at the centroid of the densest cluster
+                radius = 30  # Increased radius size
+                circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
+                circle.setPen(QPen(Qt.blue, 3))  # Thicker blue outline
+                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))  # Semi-transparent fill
+                circle.setZValue(3)
+                self.scene.addItem(circle)
             
     def calculate_intersections(self):
         intersections = []
@@ -438,7 +360,7 @@ class SegmentAndMap(QDialog):
 
         denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
         if denom == 0:
-            return None  # Lines are parallel
+            return None 
 
         intersect_x = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom
         intersect_y = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
@@ -462,11 +384,13 @@ class SegmentAndMap(QDialog):
         end_x_pos, end_y_pos = draw_line_in_direction(center_x, center_y, angle)
         end_x_neg, end_y_neg = draw_line_in_direction(center_x, center_y, angle + 180)
 
-        line_item_pos = self.scene.addLine(center_x, center_y, end_x_pos, end_y_pos, QPen(Qt.green, 2))
+        positive_direction = QLineF(QPointF(center_x, center_y),QPointF(end_x_pos, end_y_pos))
+        line_item_pos = self.scene.addLine(positive_direction, QPen(Qt.green, 2))
         line_item_pos.setZValue(2)
         self.scene.addItem(line_item_pos)
-
-        line_item_neg = self.scene.addLine(center_x, center_y, end_x_neg, end_y_neg, QPen(Qt.green, 2))
+        
+        negative_direction = QLineF(QPointF(center_x, center_y),QPointF(end_x_neg, end_y_neg))
+        line_item_neg = self.scene.addLine(negative_direction, QPen(Qt.green, 2))
         line_item_neg.setZValue(2)
         self.scene.addItem(line_item_neg)
 
