@@ -173,7 +173,7 @@ class TitleBar(QWidget):
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
-        self.title = QLabel("SpatterSense By AiCore")
+        self.title = QLabel("AiCore x SpatterSense")
         self.title.setStyleSheet("color: white; font-size: 12px;")
 
         self.AiCoreLabel = QLabel()
@@ -315,10 +315,17 @@ class MainWindow(QMainWindow):
         self.main_layout = QVBoxLayout(self.main_widget)
         self.main_layout.addWidget(self.title_bar)
 
-        self.content_layout = QHBoxLayout()
-
-        self.plotter = QtInteractor(self)
-        self.content_layout.addWidget(self.plotter.interactor)
+        self.content_layout = QHBoxLayout()        
+        
+        self.tab_layout = QHBoxLayout()
+        self.tabs = QTabWidget()
+        self.tab_layout.addWidget(self.tabs)
+        self.viewer = QWidget()
+        self.viewer_layout = QHBoxLayout(self.viewer)
+        self.plotter = QtInteractor(self.viewer)
+        self.viewer_layout.addWidget(self.plotter.interactor)
+        self.tabs.addTab(self.viewer, "3D Viewport")
+        self.content_layout.addLayout(self.tab_layout)
 
         self.sidebar = QWidget()
         self.sidebar.setFixedWidth(330)
