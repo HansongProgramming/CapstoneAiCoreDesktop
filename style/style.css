@@ -50,3 +50,22 @@ QLineEdit{
 QListWidget{
     color:white;
 }
+
+QTabWidget::pane {
+    background-color: #2b2b2b;
+    border: 1px solid #444444;
+}
+QTabBar::tab {
+    background-color: #2b2b2b;
+    color: white;
+    padding: 5px;
+    border: 1px solid #444444;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+QTabBar::tab:selected {
+    background-color: #444444;
+}
+QTabBar::tab:hover {
+    background-color: #555555;
+}
