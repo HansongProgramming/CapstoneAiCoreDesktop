@@ -320,11 +320,19 @@ class MainWindow(QMainWindow):
         self.tab_layout = QHBoxLayout()
         self.tabs = QTabWidget()
         self.tab_layout.addWidget(self.tabs)
-        self.viewer = QWidget()
-        self.viewer_layout = QHBoxLayout(self.viewer)
-        self.plotter = QtInteractor(self.viewer)
-        self.viewer_layout.addWidget(self.plotter.interactor)
-        self.tabs.addTab(self.viewer, "3D Viewport")
+        
+        self.viewer3D = QWidget()
+        self.viewer_layout3D = QHBoxLayout(self.viewer3D)
+        self.plotter3D = QtInteractor(self.viewer3D)
+        self.viewer_layout3D.addWidget(self.plotter3D.interactor)
+        
+        self.viewer2D = QWidget()
+        self.viewer_layout2D = QHBoxLayout(self.viewer2D)
+        self.plotter2D = SegmentAndMap("","",self)
+        self.viewer_layout2D.addWidget(self.plotter2D)
+        
+        self.tabs.addTab(self.viewer3D, "3D Viewport")
+        self.tabs.addTab(self.viewer2D, "2D Viewport")        
         self.content_layout.addLayout(self.tab_layout)
 
         self.sidebar = QWidget()
@@ -514,7 +522,7 @@ class MainWindow(QMainWindow):
 
     def configure_plotter(self):
 
-        renderer = self.plotter.renderer
+        renderer = self.plotter3D.renderer
         renderer.LightFollowCameraOff() 
         renderer.remove_all_lights()
 
@@ -531,11 +539,11 @@ class MainWindow(QMainWindow):
         self.ground_plane = pv.Plane(i_size=self.default_size[0] * 2, j_size=self.default_size[0]*2)
         ground_texture = pv.read_texture(self.get_resource_path("images/ground.png"))
         
-        self.plotter.set_background("#3f3f3f")
+        self.plotter3D.set_background("#3f3f3f")
         
-        self.plotter.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane", lighting=False)
-        self.plotter.add_axes()
-        self.plotter.show()
+        self.plotter3D.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane", lighting=False)
+        self.plotter3D.add_axes()
+        self.plotter3D.show()
 
     def enableUI(self, enabled):
         self.add_floor_btn.setEnabled(enabled)
@@ -621,13 +629,13 @@ class MainWindow(QMainWindow):
         
         orientation = self.texture_select.currentText().lower()
         actors_to_remove = []
-        for actor in self.plotter.renderer.actors.values():
+        for actor in self.plotter3D.renderer.actors.values():
             if isinstance(actor, vtk.vtkActor):
                 if not actor.GetTexture():
                     actors_to_remove.append(actor)
             
         for actor in actors_to_remove:
-            self.plotter.renderer.RemoveActor(actor)
+            self.plotter3D.renderer.RemoveActor(actor)
             
         for i, segment in enumerate(self.segments):
             color = "green" if i == index else "red"
@@ -648,13 +656,13 @@ class MainWindow(QMainWindow):
             json.dump(self.segments, file)
             
         actors_to_remove = []
-        for actor in self.plotter.renderer.actors.values():
+        for actor in self.plotter3D.renderer.actors.values():
             if isinstance(actor, vtk.vtkActor):
                 if not actor.GetTexture():
                     actors_to_remove.append(actor)
             
         for actor in actors_to_remove:
-            self.plotter.renderer.RemoveActor(actor)
+            self.plotter3D.renderer.RemoveActor(actor)
             
         for segment in self.segments:
             self.generate_3d_line(segment)
@@ -794,7 +802,7 @@ class MainWindow(QMainWindow):
         translation_vector = self.average_end_point
         head.translate(translation_vector,inplace=True)
         head.scale(5.0)
-        self.plotter.add_mesh(head, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
+        self.plotter3D.add_mesh(head, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
         
     def create_plane(self, position, width, height, texture):
         self.configure_plotter()
@@ -825,19 +833,19 @@ class MainWindow(QMainWindow):
             if position == "back":
                 rotationAngle = -90
                 back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
-                self.plotter.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
+                self.plotter3D.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
             elif position == "front":
                 rotationAngle = 90
                 front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
                 front_plane = front_plane.rotate_z(180, point=plane_center[position])
-                self.plotter.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
+                self.plotter3D.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
             elif position == "left":
                 left_plane.rotate_z(180)
-                self.plotter.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
+                self.plotter3D.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
             elif position == "right":
-                self.plotter.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
+                self.plotter3D.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
             elif position == "floor":
-                self.plotter.add_mesh(floor_plane, texture=texture, name=f"{position}_plane",lighting=False)
+                self.plotter3D.add_mesh(floor_plane, texture=texture, name=f"{position}_plane",lighting=False)
     
     def delete_plane(self, plane):
         global active_folder
@@ -860,7 +868,7 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Error", "Assets.json not found.")
             return
-        self.plotter.remove_actor(plane)
+        self.plotter3D.remove_actor(plane)
 
     def open_image_with_interaction(self):
         global active_folder
@@ -899,13 +907,13 @@ class MainWindow(QMainWindow):
         self.load_objects_from_json()
         
         actors_to_remove = []
-        for actor in self.plotter.renderer.actors.values():
+        for actor in self.plotter3D.renderer.actors.values():
             if isinstance(actor, vtk.vtkActor):
                 if not actor.GetTexture():
                     actors_to_remove.append(actor)
         
         for actor in actors_to_remove:
-            self.plotter.renderer.RemoveActor(actor)
+            self.plotter3D.renderer.RemoveActor(actor)
         
         try:
             with open(self.json_file, 'r') as file:
@@ -1055,11 +1063,11 @@ class MainWindow(QMainWindow):
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
 
-        self.plotter.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2),background_color=None,background_opacity=0.2,)
-        self.plotter.add_mesh(line, color=color, line_width=1.4)
-        self.plotter.add_mesh(cone, color=color)
+        self.plotter3D.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2),background_color=None,background_opacity=0.2,)
+        self.plotter3D.add_mesh(line, color=color, line_width=1.4)
+        self.plotter3D.add_mesh(cone, color=color)
 
-        self.plotter.update()
+        self.plotter3D.update()
 
 
         self.Conclusive.setText(f"Classification: Medium Velocity")

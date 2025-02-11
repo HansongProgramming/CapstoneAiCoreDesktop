@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QGraphicsView, 
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGraphicsView, 
                            QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem, 
                            QPushButton, QLabel, QCheckBox, QProgressDialog,
                            QGraphicsEllipseItem, QFileDialog,)
@@ -13,7 +13,7 @@ import json
 import torch
 import sys
 
-class SegmentAndMap(QDialog):
+class SegmentAndMap(QWidget):
     dataUpdated = pyqtSignal(str)  
 
     def __init__(self, image_path, jsonPath, parent=None):
@@ -41,7 +41,8 @@ class SegmentAndMap(QDialog):
         self.analyzing = False  
         self.scale_factor = 1.0
         self.space_pressed = False
-        self.init_ui()
+        if self.image_path:
+            self.init_ui()
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
