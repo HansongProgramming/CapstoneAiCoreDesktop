@@ -16,7 +16,7 @@ import sys
 class SegmentAndMap(QWidget):
     dataUpdated = pyqtSignal(str)  
 
-    def __init__(self, image_path=None, jsonPath=None, parent=None):
+    def __init__(self, image_path, jsonPath, parent=None):
         super().__init__(parent)
         self.json_file = jsonPath
         self.setWindowTitle("Image Interaction")
@@ -41,35 +41,9 @@ class SegmentAndMap(QWidget):
         self.analyzing = False  
         self.scale_factor = 1.0
         self.space_pressed = False
-        
-        if self.image_path:
-            print("testWorks")
-            self.init_ui()
-            
-    def load_image(self, image_path, jsonPath):
-        self.image_path = image_path
-        self.json_file = jsonPath
-        
-        print(f"Image Path: {image_path}")
-        print(f"JSON Path: {jsonpath}")
-
-
-        if hasattr(self, 'layout'):
-            self.clear_layout(self.layout)
-
         self.init_ui()
-        
-    def clear_layout(self, layout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-            elif child.layout():
-                self.clear_layout(child.layout())
-                
-    
+
     def init_ui(self):
-        print("here too")
         self.layout = QVBoxLayout(self)
         print(f"Running on: {self.device}")
         button_layout = QHBoxLayout()
