@@ -867,7 +867,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "Assets.json not found.")
             return
         self.plotter3D.remove_actor(plane)
-
+        
     def open_image_with_interaction(self):
         global active_folder
         position = self.texture_select.currentText().lower()
@@ -883,10 +883,14 @@ class MainWindow(QMainWindow):
                             self.path = os.path.join(active_folder, "Data.json")
                             self.json_file = str(self.path)
                             jsonpath = self.json_file
-                            dialog = SegmentAndMap(image_path, jsonpath, self)
+                            dialog = SegmentAndMap(image_path, jsonpath, position, self)
                             dialog.dataUpdated.connect(self.update_from_interaction)
+                            
+                            for i in reversed(range(self.viewer_layout2D.count())): 
+                                self.viewer_layout2D.itemAt(i).widget().setParent(None)
+                            
                             self.viewer_layout2D.addWidget(dialog)
-                            self.tabs.setCurrentIndex(1)
+                            self.tabs.setCurrentIndex(1) 
                             return
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
@@ -896,9 +900,14 @@ class MainWindow(QMainWindow):
             self.path = os.path.join(active_folder, "Data.json")
             self.json_file = str(self.path)
             jsonpath = self.json_file
-            dialog = SegmentAndMap(image_path, jsonpath, self)
+            dialog = SegmentAndMap(image_path, jsonpath, position, self)
             dialog.dataUpdated.connect(self.update_from_interaction)
-            dialog.exec_()
+            
+            for i in reversed(range(self.viewer_layout2D.count())): 
+                self.viewer_layout2D.itemAt(i).widget().setParent(None)
+            
+            self.viewer_layout2D.addWidget(dialog)
+            self.tabs.setCurrentIndex(1)  
         else:
             QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
 
