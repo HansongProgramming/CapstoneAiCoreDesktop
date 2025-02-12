@@ -328,8 +328,6 @@ class MainWindow(QMainWindow):
         
         self.viewer2D = QWidget()
         self.viewer_layout2D = QHBoxLayout(self.viewer2D)
-        self.plotter2D = SegmentAndMap(parent=self)
-        self.viewer_layout2D.addWidget(self.plotter2D)
         
         self.tabs.addTab(self.viewer3D, "3D Viewport")
         self.tabs.addTab(self.viewer2D, "2D Viewport")        
@@ -885,13 +883,10 @@ class MainWindow(QMainWindow):
                             self.path = os.path.join(active_folder, "Data.json")
                             self.json_file = str(self.path)
                             jsonpath = self.json_file
-                            print(f"Image Path: {image_path}")
-                            print(f"JSON Path: {jsonpath}")
-
-                            self.plotter2D.load_image(image_path, jsonpath)
-                            self.plotter2D.dataUpdated.connect(self.update_from_interaction)
-                            
-                            self.tabs.setCurrentWidget(self.viewer2D)
+                            dialog = SegmentAndMap(image_path, jsonpath, self)
+                            dialog.dataUpdated.connect(self.update_from_interaction)
+                            self.viewer_layout2D.addWidget(dialog)
+                            self.tabs.setCurrentIndex(1)
                             return
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
@@ -903,6 +898,7 @@ class MainWindow(QMainWindow):
             jsonpath = self.json_file
             dialog = SegmentAndMap(image_path, jsonpath, self)
             dialog.dataUpdated.connect(self.update_from_interaction)
+            dialog.exec_()
         else:
             QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
 
