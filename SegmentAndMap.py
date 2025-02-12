@@ -16,9 +16,10 @@ import sys
 class SegmentAndMap(QWidget):
     dataUpdated = pyqtSignal(str)  
 
-    def __init__(self, image_path, jsonPath, parent=None):
+    def __init__(self, image_path, jsonPath, position, parent=None):
         super().__init__(parent)
         self.json_file = jsonPath
+        self.position = position 
         self.setWindowTitle("Image Interaction")
         self.image_path = image_path
         self.model_path = os.path.abspath(self.get_resource_path('models/sam_vit_b_01ec64.pth'))
@@ -42,6 +43,7 @@ class SegmentAndMap(QWidget):
         self.scale_factor = 1.0
         self.space_pressed = False
         self.init_ui()
+
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
@@ -273,8 +275,6 @@ class SegmentAndMap(QWidget):
 
         num_spatters = len(self.segmented_masks)
 
-        origin_plane = self.parent().texture_select.currentText().lower()
-
         segment_data = {
             "center": [center_x, center_y], 
             "angle": float(impact_angle),  
@@ -283,7 +283,7 @@ class SegmentAndMap(QWidget):
                 "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
             },
             "spatter_count": num_spatters,
-            "origin": origin_plane
+            "origin": self.position
         }
         return impact_angle, segment_data
 
