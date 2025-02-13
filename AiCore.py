@@ -294,8 +294,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setWindowTitle("AiCore x SpatterSense")
+        self.setIcon(self.get_resource_path("images/aicore.ico"))
         self.title_bar = TitleBar(self)
-
         self.setGeometry(100, 100, 1200, 800)
 
         self.label = QLabel("AI Core Viewer", self)
@@ -477,10 +477,6 @@ class MainWindow(QMainWindow):
         self.report.setIconSize(QSize(20,20))
         self.report.clicked.connect(self.generateReport)
         self.sidebar_layout.addWidget(self.report)
-
-        self.simulate = QPushButton("Simulate")
-        self.sidebar_layout.addWidget(self.simulate)
-        self.simulate.clicked.connect(self.simulate_scene)
 
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")
@@ -664,35 +660,7 @@ class MainWindow(QMainWindow):
             
         for segment in self.segments:
             self.generate_3d_line(segment)
-             
-    def simulate_scene(self):
-        global active_folder
-        if not active_folder:
-            QMessageBox.warning(self, "Error", "No active folder selected.")
-            return
-        
-        figure_blend = os.path.join("figure", "simulation.blend") 
-        target_blend = os.path.join(active_folder, "simulation.blend")  
-        figure_script = os.path.join("figure", "simulation.py")  
-        target_script = os.path.join(active_folder, "simulation.py")
-        actor_script = os.path.join("figure", "Actor.py")
-        target_actor = os.path.join(active_folder, "Actor.py")
-        blender_exe = r"blender\blender-3.6.0-windows-x64\blender.exe"
-        
-        if not (os.path.exists(target_blend) and os.path.exists(target_script)):
-            try:
-                shutil.copy(figure_blend, target_blend)
-                shutil.copy(figure_script, target_script)
-                shutil.copy(actor_script,target_actor)
-            except Exception as e:
-                QMessageBox.warning(self, "Error", f"Failed to copy files: {e}")
-                return
-        
-        try:
-            subprocess.run([blender_exe, target_blend, "--python", target_script])
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Error running Blender: {e}")
-        
+      
     def load_stylesheet(self, file_path):
         with open(file_path, 'r') as f:
             return f.read()
