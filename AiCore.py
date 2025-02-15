@@ -120,7 +120,7 @@ class EditButton(QPushButton):
         """)
         
         self.menu = QMenu(self)
-        self.menu.setStyleSheet("""
+        self.dark_menu_style = """
             QMenu {
                 background-color: #2d2d2d;
                 color: white;
@@ -129,18 +129,69 @@ class EditButton(QPushButton):
             QMenu::item:selected {
                 background-color: #3d3d3d;
             }
-        """)
+        """
+        self.light_menu_style = """
+            QMenu {
+                background-color: #ffffff;
+                color: #333333;
+                border: 1px solid #cccccc;
+            }
+            QMenu::item:selected {
+                background-color: #e6e6e6;
+            }
+        """
+        self.menu.setStyleSheet(self.dark_menu_style)
         
         self.menu.addAction("Undo Action")
+        self.menu.addSeparator()
+        self.theme_action = self.menu.addAction("Switch to Light Theme")
         self.setMenu(self.menu)
         
         self.menu.triggered.connect(self.handleMenuAction)
         
         self.previous_states = []
+        self.is_dark_theme = True
 
     def handleMenuAction(self, action):
         if action.text() == "Undo Action":
             self.undo_last_action()
+        elif action.text() in ["Switch to Light Theme", "Switch to Dark Theme"]:
+            self.toggle_theme()
+
+    def toggle_theme(self):
+        if self.is_dark_theme:
+            stylesheet = self.main_window.load_stylesheet(self.main_window.get_resource_path("style/light.css"))
+            self.theme_action.setText("Switch to Dark Theme")
+            self.menu.setStyleSheet(self.light_menu_style)
+            self.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    color: #333333;
+                    border: none;
+                    padding: 5px;
+                }
+                QPushButton:hover {
+                    background: rgba(0,0,0,0.1);
+                }
+            """)
+        else:
+            stylesheet = self.main_window.load_stylesheet(self.main_window.get_resource_path("style/style.css"))
+            self.theme_action.setText("Switch to Light Theme")
+            self.menu.setStyleSheet(self.dark_menu_style)
+            self.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    color: white;
+                    border: none;
+                    padding: 5px;
+                }
+                QPushButton:hover {
+                    background: rgba(255,255,255,0.1);
+                }
+            """)
+            
+        self.main_window.setStyleSheet(stylesheet)
+        self.is_dark_theme = not self.is_dark_theme
 
     def undo_last_action(self):
         global active_folder
@@ -294,7 +345,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setWindowTitle("AiCore x SpatterSense")
-        self.setIcon(self.get_resource_path("images/aicore.ico"))
         self.title_bar = TitleBar(self)
         self.setGeometry(100, 100, 1200, 800)
 
@@ -546,7 +596,6 @@ class MainWindow(QMainWindow):
         self.add_back_wall_btn.setEnabled(enabled)
         self.add_front_wall_btn.setEnabled(enabled)
         self.add_points_btn.setEnabled(enabled)
-        self.simulate.setEnabled(enabled)
         self.report.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
         self.object_list.setEnabled(enabled)
