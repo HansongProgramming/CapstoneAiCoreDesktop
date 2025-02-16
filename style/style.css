@@ -69,3 +69,12 @@ QTabBar::tab:selected {
 QTabBar::tab:hover {
     background-color: #555555;
 }
+
+#sidebar{
+    border-radius: 16px;
+    background-color: #282828;
+}
+
+#sidebar *{
+    background: transparent;
+}

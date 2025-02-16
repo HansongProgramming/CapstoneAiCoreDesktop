@@ -97,7 +97,6 @@ class MenuButton(QPushButton):
                 background: transparent;
                 color: white;
                 border: none;
-                padding: 5px;
             }
             QPushButton:hover {
                 background: rgba(255,255,255,0.1);
@@ -192,7 +191,6 @@ class EditButton(QPushButton):
                 background: transparent;
                 color: white;
                 border: none;
-                padding: 5px;
             }
             QPushButton:hover {
                 background: rgba(255,255,255,0.1);
@@ -248,7 +246,6 @@ class EditButton(QPushButton):
                     background: transparent;
                     color: #333333;
                     border: none;
-                    padding: 5px;
                 }
                 QPushButton:hover {
                     background: rgba(0,0,0,0.1);
@@ -259,7 +256,6 @@ class EditButton(QPushButton):
                     background: transparent;
                     color: #333333;
                     border: none;
-                    padding: 5px;
                 }
                 QPushButton:hover {
                     background: rgba(0,0,0,0.1);
@@ -479,8 +475,14 @@ class MainWindow(QMainWindow):
         self.tab_layout.addWidget(self.tabs)
         
         self.viewer3D = QWidget()
-        self.viewer_layout3D = QHBoxLayout(self.viewer3D)
+        self.viewer_layout3D = QVBoxLayout(self.viewer3D)
         self.plotter3D = QtInteractor(self.viewer3D)
+        self.export = QPushButton("Export")
+        self.export.clicked.connect(self.export_plotter)
+        self.add_head_btn = QPushButton("Add Head")
+        self.add_head_btn.clicked.connect(self.add_head)
+        self.viewer_layout3D.addWidget(self.add_head_btn)
+        self.viewer_layout3D.addWidget(self.export)
         self.viewer_layout3D.addWidget(self.plotter3D.interactor)
         
         self.viewer2D = QWidget()
@@ -489,11 +491,18 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.viewer3D, "3D Simulation")
         self.tabs.addTab(self.viewer2D, "2D Analysis")        
         self.content_layout.addLayout(self.tab_layout)
-
+        
         self.sidebar = QWidget()
+        self.sidebar.setObjectName("sidebar")
         self.sidebar.setFixedWidth(250)
+        self.shadow = QGraphicsDropShadowEffect()
+        self.shadow.setBlurRadius(12)
+        self.shadow.setXOffset(5)
+        self.shadow.setYOffset(3)
+        self.shadow.setColor(QColor(0,0,0,100))
+        self.sidebar.setGraphicsEffect(self.shadow)
         self.sidebar_layout = QVBoxLayout(self.sidebar)
-
+        
         self.sidebarIcon = QPixmap(self.get_resource_path("images/sidebar.png"))
         self.scaled_pixmap = self.sidebarIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.floorIcon = QPixmap(self.get_resource_path("images/floor.png"))
@@ -595,11 +604,6 @@ class MainWindow(QMainWindow):
             self.analysis_layout.addWidget(button, 0, i)
             
         self.sidebar_layout.addWidget(self.analysis_frame)
-        
-        self.add_head_btn = QPushButton("Add Head")
-        self.add_head_btn.clicked.connect(self.add_head)
-        self.sidebar_layout.addWidget(self.add_head_btn)
-        self.sidebar_layout.addStretch()
 
         self.ObjectListLabel = QLabel("Spatters:")
         self.sidebar_layout.addWidget(self.ObjectListLabel)
@@ -648,6 +652,13 @@ class MainWindow(QMainWindow):
             pyi_splash.close()
         self.plotter3D.set_background("#3f3f3f")
         self.configure_plotter()
+        
+    def export_plotter(self):
+        opt = QFileDialog.Options()
+        file_path = QFileDialog.getSaveFileName(self,"Save Screenshot","","PNG Files (*.png);;All Files (*)", options=opt)
+        
+        if file_path:
+            self.plotter3D.screenshot(file_path)
 
     def configure_plotter(self):
 
