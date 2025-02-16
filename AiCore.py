@@ -368,7 +368,7 @@ class TitleBar(QWidget):
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")
         self.toggle_sidebar_btn.setIcon(QIcon(self.scaled_pixmap))
-        self.toggle_sidebar_btn.setIconSize(QSize(20,20))
+        self.toggle_sidebar_btn.setIconSize(QSize(30,30))
         self.toggle_sidebar_btn.clicked.connect(self.main.toggle_sidebar)
         
         for btn in (self.minimize_btn, self.maximize_btn, self.close_btn):
@@ -499,6 +499,15 @@ class MainWindow(QMainWindow):
         
         self.viewer2D = QWidget()
         self.viewer_layout2D = QHBoxLayout(self.viewer2D)
+        
+        
+        self.headIcon = QPixmap(self.get_resource_path("images/head.png"))
+        self.headscaled = self.headIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        self.exportIcon = QPixmap(self.get_resource_path("images/head.png"))
+        self.exportscaled = self.exportIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        
+        self.add_head_btn.setIcon(QIcon(self.headscaled))
+        self.export.setIcon(QIcon(self.exportscaled))
         
         self.tabs.addTab(self.viewer3D, "3D Simulation")
         self.tabs.addTab(self.viewer2D, "2D Analysis")        
