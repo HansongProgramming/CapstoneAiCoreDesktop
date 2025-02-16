@@ -322,7 +322,7 @@ class EditButton(QPushButton):
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to undo action: {str(e)}")
 class TitleBar(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, main_window,parent=None):
         super().__init__(parent)
         self.parent = parent
         self.layout = QHBoxLayout()
@@ -330,6 +330,7 @@ class TitleBar(QWidget):
         self.setLayout(self.layout)
         self.title = QLabel("AiCore x SpatterSense")
         self.title.setStyleSheet("color: white; font-size: 12px;")
+        self.main = main_window
 
         self.AiCoreLabel = QLabel()
         self.AiCoreIcon = QPixmap(self.get_resource_path("images/AiCore.png"))
@@ -361,6 +362,14 @@ class TitleBar(QWidget):
         self.maximize_btn.setIcon(QIcon(self.maximizeIcon)) 
         self.close_btn.setIcon(QIcon(self.exitIcon))
         self.placer = QLabel("AiCore x SpatterSense")
+        
+        self.sidebarIcon = QPixmap(self.get_resource_path("images/sidebar.png"))
+        self.scaled_pixmap = self.sidebarIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        self.toggle_sidebar_btn = QPushButton("")
+        self.toggle_sidebar_btn.setObjectName("sidebarButton")
+        self.toggle_sidebar_btn.setIcon(QIcon(self.scaled_pixmap))
+        self.toggle_sidebar_btn.setIconSize(QSize(20,20))
+        self.toggle_sidebar_btn.clicked.connect(self.main.toggle_sidebar)
         
         for btn in (self.minimize_btn, self.maximize_btn, self.close_btn):
             btn.setFixedSize(50, 30)
@@ -395,6 +404,7 @@ class TitleBar(QWidget):
         self.layout.addStretch(1)
         self.layout.addWidget(self.placer)
         self.layout.addStretch(1)
+        self.layout.addWidget(self.toggle_sidebar_btn)
         self.layout.addWidget(self.minimize_btn)
         self.layout.addWidget(self.maximize_btn)
         self.layout.addWidget(self.close_btn)
@@ -448,7 +458,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setWindowTitle("AiCore x SpatterSense")
-        self.title_bar = TitleBar(self)
+        self.title_bar = TitleBar(self,self)
         self.setGeometry(100, 100, 1200, 800)
 
         self.label = QLabel("AI Core Viewer", self)
@@ -476,13 +486,15 @@ class MainWindow(QMainWindow):
         
         self.viewer3D = QWidget()
         self.viewer_layout3D = QVBoxLayout(self.viewer3D)
+        self.docker3d = QHBoxLayout()
+        self.viewer_layout3D.addLayout(self.docker3d)
         self.plotter3D = QtInteractor(self.viewer3D)
         self.export = QPushButton("Export")
         self.export.clicked.connect(self.export_plotter)
         self.add_head_btn = QPushButton("Add Head")
         self.add_head_btn.clicked.connect(self.add_head)
-        self.viewer_layout3D.addWidget(self.add_head_btn)
-        self.viewer_layout3D.addWidget(self.export)
+        self.docker3d.addWidget(self.add_head_btn)
+        self.docker3d.addWidget(self.export)
         self.viewer_layout3D.addWidget(self.plotter3D.interactor)
         
         self.viewer2D = QWidget()
@@ -503,8 +515,7 @@ class MainWindow(QMainWindow):
         self.sidebar.setGraphicsEffect(self.shadow)
         self.sidebar_layout = QVBoxLayout(self.sidebar)
         
-        self.sidebarIcon = QPixmap(self.get_resource_path("images/sidebar.png"))
-        self.scaled_pixmap = self.sidebarIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+
         self.floorIcon = QPixmap(self.get_resource_path("images/floor.png"))
         self.scaled_pixmap1 = self.floorIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.wallrIcon = QPixmap(self.get_resource_path("images/wallR.png"))
@@ -617,14 +628,6 @@ class MainWindow(QMainWindow):
 
         self.sidebar_layout.addStretch()
 
-        self.toggle_sidebar_btn = QPushButton("")
-        self.toggle_sidebar_btn.setObjectName("sidebarButton")
-        self.toggle_sidebar_btn.setFixedSize(20,20)
-        self.toggle_sidebar_btn.setIcon(QIcon(self.scaled_pixmap))
-        self.toggle_sidebar_btn.setIconSize(QSize(20,20))
-        self.toggle_sidebar_btn.clicked.connect(self.toggle_sidebar)
-        self.content_layout.addWidget(self.toggle_sidebar_btn)
-
         self.content_layout.addWidget(self.sidebar)
 
         self.main_layout.addLayout(self.content_layout)
@@ -655,10 +658,17 @@ class MainWindow(QMainWindow):
         
     def export_plotter(self):
         opt = QFileDialog.Options()
-        file_path = QFileDialog.getSaveFileName(self,"Save Screenshot","","PNG Files (*.png);;All Files (*)", options=opt)
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Screenshot",
+            "",
+            "PNG Files (*.png);;All Files (*)",
+            options=opt
+        )
         
-        if file_path:
+        if file_path:  # Ensure it's not empty
             self.plotter3D.screenshot(file_path)
+
 
     def configure_plotter(self):
 
