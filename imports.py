@@ -2,10 +2,10 @@ import vtk
 from PyQt5.QtWidgets import (QFrame, QGridLayout, QApplication, QMainWindow, QLineEdit, 
                              QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QFileDialog, 
                              QLabel, QComboBox, QListWidget, QListWidgetItem, QMessageBox, 
-                             QMenu, QInputDialog, QMessageBox,QTabWidget, QDialog)
+                             QMenu, QInputDialog, QMessageBox,QTabWidget, QDialog, QGraphicsDropShadowEffect)
 from PyQt5.QtCore import QSize, Qt, QPoint, pyqtSignal
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from PyQt5.QtGui import QPixmap, QIcon, QImage
+from PyQt5.QtGui import (QPixmap, QIcon, QImage, QColor)
 from SegmentAndMap import SegmentAndMap 
 from pyvistaqt import QtInteractor
 from datetime import datetime
