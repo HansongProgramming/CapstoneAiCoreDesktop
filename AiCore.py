@@ -9,8 +9,87 @@ canEnable = False
 global active_folder
 active_folder = None
 
+class GenerateReportDialog(QDialog):
+    def __init__(self, main_window):
+        super().__init__(main_window)
+        self.main_window = main_window
+        self.setWindowTitle("Generate Report")
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setFixedSize(350, 250)
+
+        self.layout = QVBoxLayout(self)
+
+        self.title_label = QLabel("Generate Report")
+        self.title_label.setAlignment(Qt.AlignCenter)
+        self.title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+
+        self.case_number_label = QLabel("Case Number:")
+        self.case_number_input = QLineEdit()
+
+        self.investigator_label = QLabel("Investigator:")
+        self.investigator_input = QLineEdit()
+
+        self.location_label = QLabel("Location:")
+        self.location_input = QLineEdit()
+
+        self.button_layout = QHBoxLayout()
+        self.cancel_button = QPushButton("Cancel")
+        self.export_button = QPushButton("Export")
+
+        self.cancel_button.clicked.connect(self.close)
+        self.export_button.clicked.connect(self.generate_report)
+
+        self.button_layout.addWidget(self.cancel_button)
+        self.button_layout.addWidget(self.export_button)
+
+        self.layout.addWidget(self.title_label)
+        self.layout.addWidget(self.case_number_label)
+        self.layout.addWidget(self.case_number_input)
+        self.layout.addWidget(self.investigator_label)
+        self.layout.addWidget(self.investigator_input)
+        self.layout.addWidget(self.location_label)
+        self.layout.addWidget(self.location_input)
+        self.layout.addLayout(self.button_layout)
+
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #2d2d2d;
+                color: white;
+                border-radius: 10px;
+            }
+            QLabel {
+                font-size: 12px;
+            }
+            QLineEdit {
+                background-color: #3d3d3d;
+                border: 1px solid #555;
+                padding: 5px;
+                color: white;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #444;
+                border-radius: 5px;
+                padding: 5px;
+            }
+            QPushButton:hover {
+                background-color: #555;
+            }
+        """)
+
+    def generate_report(self):
+        case_number = self.case_number_input.text().strip()
+        investigator = self.investigator_input.text().strip()
+        location = self.location_input.text().strip()
+
+        if not case_number or not investigator or not location:
+            QMessageBox.warning(self, "Error", "Please fill in all fields before generating the report.")
+            return
+
+        self.main_window.generate_report(case_number, investigator, location)
+        self.close()
 class MenuButton(QPushButton):
-    def __init__(self,main_window, parent=None):
+    def __init__(self, main_window, parent=None):
         super().__init__("File", parent)
         self.main_window = main_window
         self.setStyleSheet("""
@@ -24,7 +103,7 @@ class MenuButton(QPushButton):
                 background: rgba(255,255,255,0.1);
             }
         """)
-        
+
         self.menu = QMenu(self)
         self.menu.setStyleSheet("""
             QMenu {
@@ -36,15 +115,15 @@ class MenuButton(QPushButton):
                 background-color: #3d3d3d;
             }
         """)
-        
-        
+
         self.menu.addAction("New Case")
         self.menu.addAction("Open")
         self.menu.addSeparator()
+        self.menu.addAction("Generate Report") 
+        self.menu.addSeparator()
         self.menu.addAction("Exit")
-        
+
         self.setMenu(self.menu)
-        
         self.menu.triggered.connect(self.handleMenuAction)
 
     def handleMenuAction(self, action):
@@ -102,7 +181,8 @@ class MenuButton(QPushButton):
                         QMessageBox.warning(self, "Error", f"Failed to load assets: {e}")
                 
                 self.main_window.load_objects_from_json()
-
+        elif action.text() == "Generate Report": 
+            self.main_window.open_generate_report_dialog()
 class EditButton(QPushButton):
     def __init__(self, main_window, parent=None):
         super().__init__("Edit", parent)
@@ -245,7 +325,6 @@ class EditButton(QPushButton):
                 QMessageBox.warning(self, "Warning", "No actions to undo.")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to undo action: {str(e)}")
-
 class TitleBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -366,7 +445,6 @@ class TitleBar(QWidget):
         else:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, relative_path)
-
 class MainWindow(QMainWindow):
     dataUpdated = pyqtSignal(str)
     def __init__(self):
@@ -408,8 +486,8 @@ class MainWindow(QMainWindow):
         self.viewer2D = QWidget()
         self.viewer_layout2D = QHBoxLayout(self.viewer2D)
         
-        self.tabs.addTab(self.viewer3D, "3D Viewport")
-        self.tabs.addTab(self.viewer2D, "2D Viewport")        
+        self.tabs.addTab(self.viewer3D, "3D Simulation")
+        self.tabs.addTab(self.viewer2D, "2D Analysis")        
         self.content_layout.addLayout(self.tab_layout)
 
         self.sidebar = QWidget()
@@ -535,28 +613,6 @@ class MainWindow(QMainWindow):
 
         self.sidebar_layout.addStretch()
 
-        self.caseNumberLabel = QLabel("Case Number:")
-        self.sidebar_layout.addWidget(self.caseNumberLabel)
-        self.caseNumber = QLineEdit()
-        self.sidebar_layout.addWidget(self.caseNumber)
-
-        self.locationLabel = QLabel("Location:")
-        self.sidebar_layout.addWidget(self.locationLabel)
-        self.location = QLineEdit()
-        self.sidebar_layout.addWidget(self.location)
-
-        self.investigatorLabel = QLabel("Investigator:")
-        self.sidebar_layout.addWidget(self.investigatorLabel)
-        self.investigator = QLineEdit()
-        self.sidebar_layout.addWidget(self.investigator)
-
-
-        self.report = QPushButton("Generate Report")
-        self.report.setIcon(QIcon(self.scaled_pixmap6))
-        self.report.setIconSize(QSize(20,20))
-        self.report.clicked.connect(self.generateReport)
-        self.sidebar_layout.addWidget(self.report)
-
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")
         self.toggle_sidebar_btn.setFixedSize(20,20)
@@ -624,7 +680,6 @@ class MainWindow(QMainWindow):
         self.add_back_wall_btn.setEnabled(enabled)
         self.add_front_wall_btn.setEnabled(enabled)
         self.add_points_btn.setEnabled(enabled)
-        self.report.setEnabled(enabled)
         self.delete_button.setEnabled(enabled)
         self.object_list.setEnabled(enabled)
         self.del_floor_btn.setEnabled(enabled)
@@ -1128,21 +1183,31 @@ class MainWindow(QMainWindow):
         self.end_points.append(end_point)
         self.average_end_point = np.mean(self.end_points, axis=0)
         
-    def generateReport(self):
-        case_number = self.caseNumber.text()
-        investigator_name = self.investigator.text()
-        location = self.location.text()
-
-        if not case_number or not investigator_name or not location:
-            QMessageBox("Please fill in all the fields before generating the report.")
+    def open_generate_report_dialog(self):
+        self.report_dialog = GenerateReportDialog(self)
+        self.report_dialog.exec_()
+        
+    def generate_report(self, case_number, investigator_name, location):
+        if not active_folder:
+            QMessageBox.warning(self, "Error", "No active case folder selected.")
             return
 
         file_name = QFileDialog.getSaveFileName(self, "Save Report", "", "Word Document (*.docx)")[0]
         if not file_name:
             return  
 
-        doc = Document()
+        data_path = os.path.join(active_folder, "Data.json")
+        try:
+            with open(data_path, 'r') as file:
+                data = json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            QMessageBox.warning(self, "Error", "Failed to load Data.json.")
+            return
 
+        spatter_count = len(data) if data else 0
+        avg_angle = sum(d["angle"] for d in data) / len(data) if data else 0
+
+        doc = Document()
         doc.add_heading('Bloodstain Pattern Analysis Report', level=1).alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
         doc.add_heading('Case Details', level=2)
@@ -1151,58 +1216,22 @@ class MainWindow(QMainWindow):
         doc.add_paragraph(f"Location of Incident: {location}")
         doc.add_paragraph(f"Date of Incident: {datetime.now().strftime('%Y-%m-%d')}")
 
-        doc.add_heading('1. Introduction', level=2)
-        doc.add_paragraph("The purpose of this analysis is to evaluate the bloodstain patterns documented at the crime scene and provide insights regarding the events that occurred.")
+        doc.add_heading('1. Evidence Analysis', level=2)
+        doc.add_paragraph(f"Total Spatter Count: {spatter_count}")
+        doc.add_paragraph(f"Average Impact Angle: {round(avg_angle, 2)}°")
 
-        doc.add_heading('2. Evidence Documentation', level=2)
-        doc.add_paragraph(f"Spatter Count: {self.spatterCount}")
-
-        doc.add_heading('3. Data Analysis', level=2)
-
-        doc.add_heading('a. Estimated Point of Origin', level=3)
-        doc.add_paragraph(f"Location: {round(abs(self.end_point2d[0]),2)} millimeters and {self.direction} {round(self.Bz,2)} millimeters off the {self.texture_select.currentText().lower()}")
-
-        doc.add_heading('b. Impact Angles', level=3)
-        if hasattr(self, 'impact_angles') and self.impact_angles:
-            low_angles = [angle for angle in self.impact_angles if angle < 30]
-            medium_angles = [angle for angle in self.impact_angles if 30 <= angle < 60]
-            high_angles = [angle for angle in self.impact_angles if angle >= 60]
-
-            if low_angles:
-                rounded_low_angles = [round(angle, 2) for angle in low_angles] 
-                doc.add_paragraph(f"Low Impact Angles: {', '.join(map(str, rounded_low_angles))} degrees")
-
-            if medium_angles:
-                rounded_medium_angles = [round(angle, 2) for angle in medium_angles]  
-                doc.add_paragraph(f"Medium Impact Angles: {', '.join(map(str, rounded_medium_angles))} degrees")
-
-            if high_angles:
-                rounded_high_angles = [round(angle, 2) for angle in high_angles]  
-                doc.add_paragraph(f"High Impact Angles: {', '.join(map(str, rounded_high_angles))} degrees")
-
-
-        doc.add_heading('4. Interpretation', level=2)
+        doc.add_heading('2. Interpretation', level=2)
         doc.add_paragraph("The data suggests a progression from low to medium bloodshed events. The patterns indicate possible blunt force trauma.")
 
-        doc.add_heading('5. Conclusions', level=2)
-        doc.add_paragraph("The BPA system data supports the following conclusions:")
-        doc.add_paragraph(f"1. The blood source was positioned approximately at {round(abs(self.end_point2d[0]),2)} millimeters {self.direction} of the room's {self.texture_select.currentText().lower()} and {round(self.Bz,2)} millimeters above ground level during the incident.")
-        doc.add_paragraph("2. The patterns indicate multiple mechanisms of bloodshed, progressing from low to medium velocity.")
-        doc.add_paragraph("3. The findings are consistent with a violent altercation.")
-
-        doc.add_heading('6. Expert\'s Statement', level=2)
-        doc.add_paragraph(f"I, {investigator_name}, certified Bloodstain Pattern Analyst, declare that this report is based on data "
-                        "generated by the BPA system and my professional analysis. The conclusions presented are "
-                        "consistent with current forensic practices.")
-        doc.add_paragraph("Signature:")
-        doc.add_paragraph(f"{investigator_name}")
-        doc.add_paragraph("Certified Bloodstain Pattern Analyst")
+        doc.add_heading('3. Conclusion', level=2)
+        doc.add_paragraph(f"The analysis indicates that the blood source was positioned at an estimated impact angle of {round(avg_angle, 2)}°.")
 
         try:
             doc.save(file_name)
             QMessageBox.information(self, "Success", "Report saved successfully.")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to save report: {e}")
+
 
 if __name__ == "__main__":
     
