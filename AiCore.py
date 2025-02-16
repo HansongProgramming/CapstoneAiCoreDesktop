@@ -174,6 +174,20 @@ class EditButton(QPushButton):
                     background: rgba(0,0,0,0.1);
                 }
             """)
+            self.main_window.title_bar.file_btn.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    color: #333333;
+                    border: none;
+                    padding: 5px;
+                }
+                QPushButton:hover {
+                    background: rgba(0,0,0,0.1);
+                }
+            """)
+            self.main_window.plotter3D.set_background("white")
+            self.main_window.plotter3D.renderer.SetBackground(1, 1, 1)  # Force white background
+            self.main_window.plotter3D.render()  # Force update
         else:
             stylesheet = self.main_window.load_stylesheet(self.main_window.get_resource_path("style/style.css"))
             self.theme_action.setText("Switch to Light Theme")
@@ -189,7 +203,22 @@ class EditButton(QPushButton):
                     background: rgba(255,255,255,0.1);
                 }
             """)
-            
+            self.main_window.title_bar.file_btn.setStyleSheet("""
+                QPushButton {
+                    background: transparent;
+                    color: white;
+                    border: none;
+                    padding: 5px;
+                }
+                QPushButton:hover {
+                    background: rgba(255,255,255,0.1);
+                }
+            """)
+            self.main_window.plotter3D.set_background("#3f3f3f")
+            self.main_window.plotter3D.renderer.SetBackground(0.25, 0.25, 0.25)  # Force dark gray background
+            self.main_window.plotter3D.render()  # Force update
+
+
         self.main_window.setStyleSheet(stylesheet)
         self.is_dark_theme = not self.is_dark_theme
 
@@ -561,7 +590,7 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         if getattr(sys, 'frozen', False):
             pyi_splash.close()
-            
+        self.plotter3D.set_background("#3f3f3f")
         self.configure_plotter()
 
     def configure_plotter(self):
@@ -583,7 +612,6 @@ class MainWindow(QMainWindow):
         self.ground_plane = pv.Plane(i_size=self.default_size[0] * 2, j_size=self.default_size[0]*2)
         ground_texture = pv.read_texture(self.get_resource_path("images/ground.png"))
         
-        self.plotter3D.set_background("#3f3f3f")
         
         self.plotter3D.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane", lighting=False)
         self.plotter3D.add_axes()
