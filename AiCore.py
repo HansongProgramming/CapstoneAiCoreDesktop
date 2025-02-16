@@ -503,7 +503,7 @@ class MainWindow(QMainWindow):
         
         self.headIcon = QPixmap(self.get_resource_path("images/head.png"))
         self.headscaled = self.headIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
-        self.exportIcon = QPixmap(self.get_resource_path("images/head.png"))
+        self.exportIcon = QPixmap(self.get_resource_path("images/Export.png"))
         self.exportscaled = self.exportIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         
         self.add_head_btn.setIcon(QIcon(self.headscaled))
