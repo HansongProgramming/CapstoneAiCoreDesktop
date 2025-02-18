@@ -65,6 +65,7 @@ Technologies used in the project:
 | **os** | for operating system commands |
 |**python-docx**| to export and generate responses|
 |**pyqt** | for system GUI|
+|**pyvistaqt** | to use QtInteractor as the plotter / simulation|
 ---
 
 ## Installation
@@ -75,15 +76,18 @@ To get started with AICore, follow these steps:
 
 2. **Run the Setup.exe**
 
+3. **Select Installation Directory**
+
+4. **Start the installation**
 ---
 
 ## Usage
-
-1. **Input Crime Scene Data**
-   - Provide images of the crime scene for analysis.
-
-2. **Run AICore**
+1. **Run AICore**
    using AiCore.exe
+
+2. **Input Crime Scene Data**
+   - Provide images of the crime scene for analysis.
+   - You can import images through pressing Add Floor / any of the walls.
 
 3. **View 3D Visualizations**
    - Access the generated 3D models and patterns via the PyVista interface.
