@@ -102,6 +102,13 @@ To get started with AICore, follow these steps:
 1. Upload high-resolution images of the bloodstain patterns from the crime scene.
 2. Select Blood spatters by Pressing Add Points
 3. Wait as the system analyzes the stains for you!
+4. You can press add head to see where the expected Area of convergence is.
+5. The Export(2d view) buttons saves an image of the image with the layers of analysis.
+6. The Export(3d view) buttons saves the plotter as a png image including all actors and scene.
+
+### Theme and customization
+1. Light mode is added inside edit > switch to light mode
+2. Alternatively, dark mode is inside edit > switch to dark mode when light mode is toggled.
 ---
 
 ## Contributions
@@ -127,7 +134,7 @@ Contributions are welcome! If you'd like to contribute to AICore, please follow 
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.
 
 ---
 
