@@ -675,7 +675,7 @@ class MainWindow(QMainWindow):
             options=opt
         )
         
-        if file_path:  # Ensure it's not empty
+        if file_path: 
             self.plotter3D.screenshot(file_path)
 
 
@@ -755,7 +755,7 @@ class MainWindow(QMainWindow):
         self.AngleReport.setText(f"Impact Angle: {round(selected_segment['angle'], 2)}°")
 
         start = selected_segment["center"]
-        end = selected_segment["line_endpoints"]["negative_direction"]
+        end = selected_segment["convergence_area"]
         dx = end[0] - start[0]
         dy = end[1] - start[1]
         distance = math.sqrt(dx*dx + dy*dy)
@@ -796,6 +796,7 @@ class MainWindow(QMainWindow):
         for i, segment in enumerate(self.segments):
             color = "green" if i == index else "red"
             self.generate_3d_line(segment, color)
+
 
     def delete_selected_object(self):
         selected_items = self.object_list.selectedItems()
@@ -1070,7 +1071,7 @@ class MainWindow(QMainWindow):
                     directions = []
                     for segment in self.segments:
                         start = segment["center"]
-                        end = segment["line_endpoints"]["negative_direction"]
+                        end = segment["convergence_area"]
                         dx = end[0] - start[0]
                         dy = end[1] - start[1]
                         distance = math.sqrt(dx*dx + dy*dy)
@@ -1114,14 +1115,14 @@ class MainWindow(QMainWindow):
             
         for segment in self.segments:
             self.generate_3d_line(segment)
-            
+
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
-        self.label= segment["segment_number"]
+        self.label = segment["segment_number"]
         self.angle = segment["angle"]
         self.start_point_2d = segment["center"]
         self.spatterCount = segment["spatter_count"]
-        self.end_point2d = segment["line_endpoints"]["negative_direction"]
+        self.end_point2d = segment["convergence_area"]
         self.impact_angles = []
 
         orientation = segment.get("origin", self.texture_select.currentText().lower())
@@ -1190,7 +1191,6 @@ class MainWindow(QMainWindow):
             start_point = np.array([Ax, Ay, Az])
             end_point = np.array([Bx, By, abs(self.Bz)])
 
-
         line = pv.Line(start_point, end_point)
 
         direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
@@ -1201,17 +1201,17 @@ class MainWindow(QMainWindow):
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
 
-        self.plotter3D.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2),background_color=None,background_opacity=0.2,)
+        self.plotter3D.add_point_labels([start_point], [self.label], render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2), background_color=None, background_opacity=0.2)
         self.plotter3D.add_mesh(line, color=color, line_width=1.4)
         self.plotter3D.add_mesh(cone, color=color)
 
         self.plotter3D.update()
 
-
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
         self.end_points.append(end_point)
         self.average_end_point = np.mean(self.end_points, axis=0)
+
         
     def open_generate_report_dialog(self):
         self.report_dialog = GenerateReportDialog(self)
