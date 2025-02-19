@@ -576,15 +576,15 @@ class MainWindow(QMainWindow):
         self.add_front_wall_btn.setIconSize(QSize(20,20))
         
         self.del_floor_btn = QPushButton()
-        self.del_floor_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["floor_plane"]))
+        self.del_floor_btn.clicked.connect(lambda: self.delete_plane(self.plotter3D.renderer.actors["floor_plane"]))
         self.del_right_wall_btn = QPushButton()
-        self.del_right_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["right_plane"]))
+        self.del_right_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter3D.renderer.actors["right_plane"]))
         self.del_left_wall_btn = QPushButton()
-        self.del_left_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["left_plane"]))
+        self.del_left_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter3D.renderer.actors["left_plane"]))
         self.del_back_wall_btn = QPushButton()
-        self.del_back_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["back_plane"]))
+        self.del_back_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter3D.renderer.actors["back_plane"]))
         self.del_front_wall_btn = QPushButton()
-        self.del_front_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter.renderer.actors["front_plane"]))
+        self.del_front_wall_btn.clicked.connect(lambda: self.delete_plane(self.plotter3D.renderer.actors["front_plane"]))
         
         self.asset_buttons = [ self.add_floor_btn, self.del_floor_btn, self.add_right_wall_btn, self.del_right_wall_btn, self.add_left_wall_btn, self.del_left_wall_btn, self.add_back_wall_btn, self.del_back_wall_btn, self.add_front_wall_btn, self.del_front_wall_btn ]
 
@@ -1138,16 +1138,9 @@ class MainWindow(QMainWindow):
 
         Bx = self.end_point2d[0] - image_width / 2
         By = -(self.end_point2d[1] - image_height / 2)
-        
-        initAx = Ax
-        initAy = Ay
-        initBx = Bx
-        initBy = By
 
-        Bxy = math.sqrt(((initBx - (initAx))**2) + ((initBy - (initAy))**2))
-        angleInDeg = self.angle
-        Bxyz = math.sin(math.radians(angleInDeg))
-        self.Bz = (Bxyz * Bxy)
+        distance = math.sqrt((Bx - Ax) ** 2 + (By - Ay) ** 2)  
+        Bz = distance * math.tan(math.radians(self.angle)) 
 
         dx = Bx - Ax
         dy = By - Ay
@@ -1189,7 +1182,7 @@ class MainWindow(QMainWindow):
             end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
         elif orientation == "floor":
             start_point = np.array([Ax, Ay, Az])
-            end_point = np.array([Bx, By, abs(self.Bz)])
+            end_point = np.array([Bx, By, abs(Bz)])
 
         line = pv.Line(start_point, end_point)
 
