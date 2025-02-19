@@ -35,6 +35,7 @@ class SegmentAndMap(QWidget):
         self.segmented_masks = []
         self.selection_boxes = []  
         self.selection_rects = []  
+        self.convergence_center = []
         self.mask_item = None
         self.is_ai_select = False
         self.convergence_lines = []
@@ -269,23 +270,21 @@ class SegmentAndMap(QWidget):
         
         angle = self.calculate_angle(mask)
         
-        line_endpoints = self.draw_convergence_line(center_x, center_y, angle)
+        _, convergence_point = self.draw_convergence_line(center_x, center_y, angle)
 
         impact_angle = self.calculate_impact_angle(angle)
-
         num_spatters = len(self.segmented_masks)
 
         segment_data = {
-            "center": [center_x, center_y], 
-            "angle": float(impact_angle),  
-            "line_endpoints": {
-                "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
-                "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
-            },
+            "segment_number": len(self.segmented_masks),
+            "center": [center_x, center_y],
+            "convergence_area": convergence_point,
+            "angle": float(impact_angle),
             "spatter_count": num_spatters,
             "origin": self.position
         }
         return impact_angle, segment_data
+
 
     def calculate_angle(self, mask):
         y, x = np.where(mask > 0)
@@ -314,29 +313,30 @@ class SegmentAndMap(QWidget):
         intersections = self.calculate_intersections()
 
         if intersections:
-            # Convert intersections to numpy array
             points = np.array(intersections)
 
-            # Apply DBSCAN clustering to find dense clusters of intersection points
             clustering = DBSCAN(eps=20, min_samples=2).fit(points)
             labels = clustering.labels_
 
-            # Find the largest cluster (excluding noise points labeled as -1)
             unique_labels, counts = np.unique(labels[labels != -1], return_counts=True)
             if unique_labels.size > 0:
                 max_cluster_label = unique_labels[np.argmax(counts)]
                 cluster_points = points[labels == max_cluster_label]
 
-                # Compute the centroid of the most intersected cluster
                 avg_x, avg_y = np.mean(cluster_points, axis=0)
+                
+                self.convergence_center = (avg_x, avg_y)
 
-                # Draw a bigger circle at the centroid of the densest cluster
-                radius = 30  # Increased radius size
+                radius = 30 
                 circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
-                circle.setPen(QPen(Qt.blue, 3))  # Thicker blue outline
-                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))  # Semi-transparent fill
+                circle.setPen(QPen(Qt.blue, 3))  
+                circle.setBrush(QBrush(QColor(0, 0, 255, 80))) 
                 circle.setZValue(3)
                 self.scene.addItem(circle)
+            else:
+                self.convergence_center = None
+        else:
+            self.convergence_center = None
             
     def calculate_intersections(self):
         intersections = []
@@ -420,3 +420,4 @@ class SegmentAndMap(QWidget):
 
         with open(self.json_file, "w") as file:
             json.dump(data, file, indent=4)
+            
