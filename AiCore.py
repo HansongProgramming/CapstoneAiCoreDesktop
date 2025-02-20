@@ -721,7 +721,7 @@ class SegmentAndMap(QWidget):
             "origin": self.position
         }
         return impact_angle, segment_data
-
+    
     def calculate_angle(self, mask):
         y, x = np.where(mask > 0)
         center_x = np.mean(x)
@@ -855,7 +855,6 @@ class SegmentAndMap(QWidget):
 
         with open(self.json_file, "w") as file:
             json.dump(data, file, indent=4)   
-            
 class MainWindow(QMainWindow):
     dataUpdated = pyqtSignal(str)
     def __init__(self):
