@@ -5,9 +5,9 @@ from PyQt5.QtWidgets import (QFrame, QGridLayout, QApplication, QMainWindow, QLi
                              QMenu, QInputDialog, QMessageBox,QTabWidget, QDialog, 
                              QGraphicsDropShadowEffect,QGraphicsView,QGraphicsScene,
                              QGraphicsPixmapItem,QGraphicsRectItem,QCheckBox,QProgressDialog,
-                             QGraphicsEllipseItem
+                             QGraphicsEllipseItem, QStackedWidget
                              )
-from PyQt5.QtCore import QSize, Qt, QPoint, pyqtSignal, Qt, QRectF, QLineF, QPointF
+from PyQt5.QtCore import (QSize, Qt, QPoint, pyqtSignal, Qt, QRectF, QLineF, QPointF,QEvent) 
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from PyQt5.QtGui import (QPixmap, QIcon, QImage, QColor,QPainter,QPen,QBrush,QCursor)
 from segment_anything import sam_model_registry, SamPredictor
