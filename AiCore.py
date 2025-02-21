@@ -1083,6 +1083,7 @@ class MainWindow(QMainWindow):
 
         new_x = viewer_width - list_width - margin
         new_y = margin
+        print(new_x, new_y)
         self.object_list.setGeometry(new_x, new_y, list_width, list_height)
 
 
@@ -1684,6 +1685,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    window.object_list.move(749, 5)
+    window.object_list.move(779, 5)
     sys.exit(app.exec_())
 
