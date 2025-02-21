@@ -895,10 +895,11 @@ class MainWindow(QMainWindow):
         self.plotter3D.installEventFilter(self)
 
         self.object_list = QListWidget(self.viewer3D)
-        self.object_list.setFixedSize(150, 300) 
+        self.object_list.setFixedSize(120, 200) 
 
         self.object_list.raise_()
         self.object_list.setParent(self.plotter3D.interactor) 
+        self.object_list.itemClicked.connect(self.on_object_selected)
 
         self.docker3d = QHBoxLayout()
         self.export = QPushButton("Export")
@@ -1076,8 +1077,8 @@ class MainWindow(QMainWindow):
         viewer_width = self.plotter3D.width()
         viewer_height = self.plotter3D.height()
 
-        list_width = 150
-        list_height = 300
+        list_width = 120
+        list_height = 200
         margin = 5 
 
         new_x = viewer_width - list_width - margin
@@ -1162,7 +1163,7 @@ class MainWindow(QMainWindow):
     def update_object_list(self):
         self.object_list.clear()
         for i, segment in enumerate(self.segments):
-            item = QListWidgetItem(f"Spatter {i+1}: {segment['angle']}")
+            item = QListWidgetItem(f"Spatter {i+1}: {round(int(segment['angle']),2)}")
             self.object_list.addItem(item)
             
     def get_resource_path(self, relative_path):
