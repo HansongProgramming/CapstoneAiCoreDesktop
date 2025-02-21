@@ -890,21 +890,30 @@ class MainWindow(QMainWindow):
         
         self.viewer3D = QWidget()
         self.viewer_layout3D = QVBoxLayout(self.viewer3D)
-        self.docker3d = QHBoxLayout()
-        self.viewer_layout3D.addLayout(self.docker3d)
+
         self.plotter3D = QtInteractor(self.viewer3D)
+        self.plotter3D.installEventFilter(self)
+
+        self.object_list = QListWidget(self.viewer3D)
+        self.object_list.setFixedSize(150, 300) 
+
+        self.object_list.raise_()
+        self.object_list.setParent(self.plotter3D.interactor) 
+
+        self.docker3d = QHBoxLayout()
         self.export = QPushButton("Export")
         self.export.clicked.connect(self.export_plotter)
         self.add_head_btn = QPushButton("Add Head")
         self.add_head_btn.clicked.connect(self.add_head)
         self.docker3d.addWidget(self.add_head_btn)
         self.docker3d.addWidget(self.export)
+
+        self.viewer_layout3D.addLayout(self.docker3d)
         self.viewer_layout3D.addWidget(self.plotter3D.interactor)
-        
+
         self.viewer2D = QWidget()
         self.viewer_layout2D = QHBoxLayout(self.viewer2D)
-        
-        
+          
         self.headIcon = QPixmap(self.get_resource_path("images/head.png"))
         self.headscaled = self.headIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.exportIcon = QPixmap(self.get_resource_path("images/Export.png"))
@@ -928,7 +937,6 @@ class MainWindow(QMainWindow):
         self.sidebar.setGraphicsEffect(self.shadow)
         self.sidebar_layout = QVBoxLayout(self.sidebar)
         
-
         self.floorIcon = QPixmap(self.get_resource_path("images/floor.png"))
         self.scaled_pixmap1 = self.floorIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.wallrIcon = QPixmap(self.get_resource_path("images/wallR.png"))
@@ -1029,12 +1037,6 @@ class MainWindow(QMainWindow):
             
         self.sidebar_layout.addWidget(self.analysis_frame)
 
-        self.ObjectListLabel = QLabel("Spatters:")
-        self.sidebar_layout.addWidget(self.ObjectListLabel)
-        self.object_list = QListWidget()
-        self.object_list.itemClicked.connect(self.on_object_selected)
-        self.sidebar_layout.addWidget(self.object_list)
-
         self.delete_button = QPushButton("Delete Selected")
         self.delete_button.clicked.connect(self.delete_selected_object)
         self.sidebar_layout.addWidget(self.delete_button)
@@ -1062,6 +1064,7 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.bottom_bar)
 
         self.enableUI(canEnable)
+        self.resizeEvent(None)
 
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         if getattr(sys, 'frozen', False):
@@ -1069,6 +1072,24 @@ class MainWindow(QMainWindow):
         self.plotter3D.set_background("#3f3f3f")
         self.configure_plotter()
         
+    def update_object_list_position(self):
+        viewer_width = self.plotter3D.width()
+        viewer_height = self.plotter3D.height()
+
+        list_width = 150
+        list_height = 300
+        margin = 5 
+
+        new_x = viewer_width - list_width - margin
+        new_y = margin
+        self.object_list.setGeometry(new_x, new_y, list_width, list_height)
+
+
+    def eventFilter(self, obj, event):
+        if obj == self.plotter3D and event.type() == QEvent.Resize:
+            self.update_object_list_position()
+        return super().eventFilter(obj, event)
+
     def export_plotter(self):
         opt = QFileDialog.Options()
         file_path, _ = QFileDialog.getSaveFileName(
@@ -1081,7 +1102,6 @@ class MainWindow(QMainWindow):
         
         if file_path: 
             self.plotter3D.screenshot(file_path)
-
 
     def configure_plotter(self):
 
@@ -1663,5 +1683,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
+    window.object_list.move(749, 5)
     sys.exit(app.exec_())
 
