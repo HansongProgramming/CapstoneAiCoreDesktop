@@ -900,14 +900,19 @@ class MainWindow(QMainWindow):
         self.object_list.raise_()
         self.object_list.setParent(self.plotter3D.interactor) 
         self.object_list.itemClicked.connect(self.on_object_selected)
+        
 
         self.docker3d = QHBoxLayout()
         self.export = QPushButton("Export")
-        self.export.clicked.connect(self.export_plotter)
         self.add_head_btn = QPushButton("Add Head")
+        self.close_btn = QPushButton("Show Spatters")
+        self.close_btn.clicked.connect(lambda: (self.object_list.setVisible(not self.object_list.isVisible()),  self.close_btn.setText("Show Spatters" if self.object_list.isHidden() else "Hide Spatters")))
         self.add_head_btn.clicked.connect(self.add_head)
+        self.export.clicked.connect(self.export_plotter)
         self.docker3d.addWidget(self.add_head_btn)
         self.docker3d.addWidget(self.export)
+        self.docker3d.addWidget(self.close_btn)
+        
 
         self.viewer_layout3D.addLayout(self.docker3d)
         self.viewer_layout3D.addWidget(self.plotter3D.interactor)
@@ -1083,7 +1088,6 @@ class MainWindow(QMainWindow):
 
         new_x = viewer_width - list_width - margin
         new_y = margin
-        print(new_x, new_y)
         self.object_list.setGeometry(new_x, new_y, list_width, list_height)
 
 
