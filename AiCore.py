@@ -1,6 +1,5 @@
 from imports import *
 
-
 if getattr(sys, 'frozen', False):
     import pyi_splash
 
@@ -8,7 +7,6 @@ global canEnable
 canEnable = False
 global active_folder
 active_folder = None
-
 class GenerateReportDialog(QDialog):
     def __init__(self, main_window):
         super().__init__(main_window)
@@ -473,7 +471,6 @@ class SegmentAndMap(QWidget):
         self.segmented_masks = []
         self.selection_boxes = []  
         self.selection_rects = []  
-        self.convergence_center = []
         self.mask_item = None
         self.is_ai_select = False
         self.convergence_lines = []
@@ -542,6 +539,7 @@ class SegmentAndMap(QWidget):
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         
     def export_scene(self):
+        """Export the entire scene as a PNG image."""
         scene_rect = self.scene.sceneRect()
         
         image = QImage(int(scene_rect.width()), int(scene_rect.height()), QImage.Format_ARGB32)
@@ -707,21 +705,24 @@ class SegmentAndMap(QWidget):
         
         angle = self.calculate_angle(mask)
         
-        _, convergence_point = self.draw_convergence_line(center_x, center_y, angle)
+        line_endpoints = self.draw_convergence_line(center_x, center_y, angle)
 
         impact_angle = self.calculate_impact_angle(angle)
+
         num_spatters = len(self.segmented_masks)
 
         segment_data = {
-            "segment_number": len(self.segmented_masks),
-            "center": [center_x, center_y],
-            "convergence_area": convergence_point,
-            "angle": float(impact_angle),
+            "center": [center_x, center_y], 
+            "angle": float(impact_angle),  
+            "line_endpoints": {
+                "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
+                "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
+            },
             "spatter_count": num_spatters,
             "origin": self.position
         }
         return impact_angle, segment_data
-    
+
     def calculate_angle(self, mask):
         y, x = np.where(mask > 0)
         center_x = np.mean(x)
@@ -749,30 +750,29 @@ class SegmentAndMap(QWidget):
         intersections = self.calculate_intersections()
 
         if intersections:
+            # Convert intersections to numpy array
             points = np.array(intersections)
 
+            # Apply DBSCAN clustering to find dense clusters of intersection points
             clustering = DBSCAN(eps=20, min_samples=2).fit(points)
             labels = clustering.labels_
 
+            # Find the largest cluster (excluding noise points labeled as -1)
             unique_labels, counts = np.unique(labels[labels != -1], return_counts=True)
             if unique_labels.size > 0:
                 max_cluster_label = unique_labels[np.argmax(counts)]
                 cluster_points = points[labels == max_cluster_label]
 
+                # Compute the centroid of the most intersected cluster
                 avg_x, avg_y = np.mean(cluster_points, axis=0)
-                
-                self.convergence_center = (avg_x, avg_y)
 
-                radius = 30 
+                # Draw a bigger circle at the centroid of the densest cluster
+                radius = 30  # Increased radius size
                 circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
-                circle.setPen(QPen(Qt.blue, 3))  
-                circle.setBrush(QBrush(QColor(0, 0, 255, 80))) 
+                circle.setPen(QPen(Qt.blue, 3))  # Thicker blue outline
+                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))  # Semi-transparent fill
                 circle.setZValue(3)
                 self.scene.addItem(circle)
-            else:
-                self.convergence_center = None
-        else:
-            self.convergence_center = None
             
     def calculate_intersections(self):
         intersections = []
@@ -802,6 +802,7 @@ class SegmentAndMap(QWidget):
         intersect_y = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
 
         return intersect_x, intersect_y
+
 
     def draw_convergence_line(self, center_x, center_y, angle):
         step_size = 5
@@ -854,7 +855,7 @@ class SegmentAndMap(QWidget):
         data.append(segment_data)
 
         with open(self.json_file, "w") as file:
-            json.dump(data, file, indent=4)   
+            json.dump(data, file, indent=4)
 class MainWindow(QMainWindow):
     dataUpdated = pyqtSignal(str)
     def __init__(self):
@@ -907,7 +908,6 @@ class MainWindow(QMainWindow):
         self.object_list.setParent(self.plotter3D.interactor) 
         self.object_list.itemClicked.connect(self.on_object_selected)
         
-
         self.docker3d = QHBoxLayout()
         self.selected_plane = QLabel("Selected Plane:")
         self.export = QPushButton("Export")
@@ -1098,7 +1098,6 @@ class MainWindow(QMainWindow):
         new_y = margin
         self.object_list.setGeometry(new_x, new_y, list_width, list_height)
 
-
     def eventFilter(self, obj, event):
         if obj == self.plotter3D and event.type() == QEvent.Resize:
             self.update_object_list_position()
@@ -1117,7 +1116,6 @@ class MainWindow(QMainWindow):
             if index != -1:
                 self.texture_select.setCurrentIndex(index)
                 print(index)
-
 
     def export_plotter(self):
         opt = QFileDialog.Options()
@@ -1208,7 +1206,7 @@ class MainWindow(QMainWindow):
         self.AngleReport.setText(f"Impact Angle: {round(selected_segment['angle'], 2)}°")
 
         start = selected_segment["center"]
-        end = selected_segment["convergence_area"]
+        end = selected_segment["line_endpoints"]["negative_direction"]
         dx = end[0] - start[0]
         dy = end[1] - start[1]
         distance = math.sqrt(dx*dx + dy*dy)
@@ -1533,7 +1531,7 @@ class MainWindow(QMainWindow):
                     directions = []
                     for segment in self.segments:
                         start = segment["center"]
-                        end = segment["convergence_area"]
+                        end = segment["line_endpoints"]["negative_direction"]
                         dx = end[0] - start[0]
                         dy = end[1] - start[1]
                         distance = math.sqrt(dx*dx + dy*dy)
@@ -1577,14 +1575,13 @@ class MainWindow(QMainWindow):
             
         for segment in self.segments:
             self.generate_3d_line(segment)
-
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
-        self.label = segment["segment_number"]
+        self.label= segment["segment_number"]
         self.angle = segment["angle"]
         self.start_point_2d = segment["center"]
         self.spatterCount = segment["spatter_count"]
-        self.end_point2d = segment["convergence_area"]
+        self.end_point2d = segment["line_endpoints"]["negative_direction"]
         self.impact_angles = []
 
         orientation = segment.get("origin", self.texture_select.currentText().lower())
@@ -1600,9 +1597,16 @@ class MainWindow(QMainWindow):
 
         Bx = self.end_point2d[0] - image_width / 2
         By = -(self.end_point2d[1] - image_height / 2)
+        
+        initAx = Ax
+        initAy = Ay
+        initBx = Bx
+        initBy = By
 
-        distance = math.sqrt((Bx - Ax) ** 2 + (By - Ay) ** 2)  
-        Bz = distance * math.tan(math.radians(self.angle)) 
+        Bxy = math.sqrt(((initBx - (initAx))**2) + ((initBy - (initAy))**2))
+        angleInDeg = self.angle
+        Bxyz = math.sin(math.radians(angleInDeg))
+        self.Bz = (Bxyz * Bxy)
 
         dx = Bx - Ax
         dy = By - Ay
@@ -1644,7 +1648,8 @@ class MainWindow(QMainWindow):
             end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
         elif orientation == "floor":
             start_point = np.array([Ax, Ay, Az])
-            end_point = np.array([Bx, By, abs(Bz)])
+            end_point = np.array([Bx, By, abs(self.Bz)])
+
 
         line = pv.Line(start_point, end_point)
 
@@ -1656,18 +1661,18 @@ class MainWindow(QMainWindow):
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
 
-        self.plotter3D.add_point_labels([start_point], [self.label], render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2), background_color=None, background_opacity=0.2)
+        self.plotter3D.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2),background_color=None,background_opacity=0.2,)
         self.plotter3D.add_mesh(line, color=color, line_width=1.4)
         self.plotter3D.add_mesh(cone, color=color)
 
         self.plotter3D.update()
 
+
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
         self.end_points.append(end_point)
         self.average_end_point = np.mean(self.end_points, axis=0)
-
-        
+  
     def open_generate_report_dialog(self):
         self.report_dialog = GenerateReportDialog(self)
         self.report_dialog.exec_()
