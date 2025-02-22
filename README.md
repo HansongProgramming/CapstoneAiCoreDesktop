@@ -144,6 +144,8 @@ For questions or support, feel free to contact:
 - **HansongProgramming**: [hlf1850@students.uc-bcf.edu.ph](mailto:hlf1850@students.uc-bcf.edu.ph)
 - GitHub: [github.com/HansongProgramming](https://github.com/HansongProgramming)
 
+- **Augnina**: [apr1299@students.uc-bcf.edu.ph](mailto:apr1299@students.uc-bcf.edu.ph)
+- GitHub: [github.com/Augnina](https://github.com/Augnina)
 ---
 
 ## Acknowledgments
