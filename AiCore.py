@@ -896,7 +896,7 @@ class MainWindow(QMainWindow):
         self.plotter3D.installEventFilter(self)
         self.picker = vtk.vtkCellPicker()
         self.picker.SetTolerance(0.01)
-        self.plotter3D.iren.add_observer("KeyPressEvent",self.on_pick)
+        self.plotter3D.iren.add_observer("LeftButtonPressEvent",self.on_pick)
         self.planes = []
         self.mesh_map = {}
         
@@ -909,6 +909,7 @@ class MainWindow(QMainWindow):
         
 
         self.docker3d = QHBoxLayout()
+        self.selected_plane = QLabel("Selected Plane:")
         self.export = QPushButton("Export")
         self.add_head_btn = QPushButton("Add Head")
         self.close_btn = QPushButton("Hide Spatters")
@@ -916,6 +917,7 @@ class MainWindow(QMainWindow):
                                                 self.close_btn.setText("Show Spatters" if self.object_list.isHidden() else "Hide Spatters")))
         self.add_head_btn.clicked.connect(self.add_head)
         self.export.clicked.connect(self.export_plotter)
+        self.docker3d.addWidget(self.selected_plane)
         self.docker3d.addWidget(self.add_head_btn)
         self.docker3d.addWidget(self.export)
         self.docker3d.addWidget(self.close_btn)
@@ -1103,16 +1105,12 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
     
     def on_pick(self, obj, event):
-        key = obj.GetKeySym()  
-        if key.lower() == "p": 
-            click_pos = self.plotter3D.iren.get_event_position()
-            self.picker.Pick(click_pos[0], click_pos[1], 0, self.plotter3D.renderer)
+        click_pos = self.plotter3D.iren.get_event_position()
+        self.picker.Pick(click_pos[0], click_pos[1], 0, self.plotter3D.renderer)
 
-            actor = self.picker.GetActor()
-            if actor and actor in self.mesh_map:
-                print(f"Picked: {self.mesh_map[actor]}")
-            else:
-                print("No valid selection.")
+        actor = self.picker.GetActor()
+        if actor and actor in self.mesh_map:
+            self.selected_plane.setText(f"Selected Plane: {self.mesh_map[actor]}")
 
     def export_plotter(self):
         opt = QFileDialog.Options()
@@ -1411,19 +1409,27 @@ class MainWindow(QMainWindow):
                 back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
                 back = self.plotter3D.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
                 self.planes.append(back_plane)
-                self.mesh_map[back] = "Plane_Back"  
+                self.mesh_map[back] = "back"  
             elif position == "front":
                 rotationAngle = 90
                 front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
                 front_plane = front_plane.rotate_z(180, point=plane_center[position])
-                self.plotter3D.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
+                front = self.plotter3D.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
+                self.planes.append(front_plane)
+                self.mesh_map[front] = "front"
             elif position == "left":
                 left_plane.rotate_z(180)
-                self.plotter3D.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
+                left = self.plotter3D.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
+                self.planes.append(left_plane)
+                self.mesh_map[left] = "left"
             elif position == "right":
-                self.plotter3D.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
+                right = self.plotter3D.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
+                self.planes.append(right_plane)
+                self.mesh_map[right] = "right"
             elif position == "floor":
-                self.plotter3D.add_mesh(floor_plane, texture=texture, name=f"{position}_plane",lighting=False)
+                floor = self.plotter3D.add_mesh(floor_plane, texture=texture, name=f"{position}_plane",lighting=False)
+                self.planes.append(floor_plane)
+                self.mesh_map[floor] = "floor"
     
     def delete_plane(self, plane):
         global active_folder
