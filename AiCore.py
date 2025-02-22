@@ -1111,6 +1111,13 @@ class MainWindow(QMainWindow):
         actor = self.picker.GetActor()
         if actor and actor in self.mesh_map:
             self.selected_plane.setText(f"Selected Plane: {self.mesh_map[actor]}")
+            index = self.texture_select.findText(self.mesh_map[actor])
+            print(self.mesh_map[actor])
+            print(index)
+            if index != -1:
+                self.texture_select.setCurrentIndex(index)
+                print(index)
+
 
     def export_plotter(self):
         opt = QFileDialog.Options()
@@ -1409,27 +1416,27 @@ class MainWindow(QMainWindow):
                 back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
                 back = self.plotter3D.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
                 self.planes.append(back_plane)
-                self.mesh_map[back] = "back"  
+                self.mesh_map[back] = "Back"  
             elif position == "front":
                 rotationAngle = 90
                 front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
                 front_plane = front_plane.rotate_z(180, point=plane_center[position])
                 front = self.plotter3D.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
                 self.planes.append(front_plane)
-                self.mesh_map[front] = "front"
+                self.mesh_map[front] = "Front"
             elif position == "left":
                 left_plane.rotate_z(180)
                 left = self.plotter3D.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
                 self.planes.append(left_plane)
-                self.mesh_map[left] = "left"
+                self.mesh_map[left] = "Left"
             elif position == "right":
                 right = self.plotter3D.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
                 self.planes.append(right_plane)
-                self.mesh_map[right] = "right"
+                self.mesh_map[right] = "Right"
             elif position == "floor":
                 floor = self.plotter3D.add_mesh(floor_plane, texture=texture, name=f"{position}_plane",lighting=False)
                 self.planes.append(floor_plane)
-                self.mesh_map[floor] = "floor"
+                self.mesh_map[floor] = "Floor"
     
     def delete_plane(self, plane):
         global active_folder
