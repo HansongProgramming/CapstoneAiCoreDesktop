@@ -1,5 +1,5 @@
 
-<img src="https://github.com/HansongProgramming/CapstoneAiCoreDesktop/blob/main/images/aicore.png">
+<img src="[https://github.com/HansongProgramming/CapstoneAiCoreDesktop/blob/main/images/aicore.png](https://github.com/HansongProgramming/CapstoneAiCoreDesktop/blob/main/images/SplashScreen.png)">
 <p id="description">Artificial Intelligence in Crime Observations and Reconstruction Efficiency</p>
 
 
