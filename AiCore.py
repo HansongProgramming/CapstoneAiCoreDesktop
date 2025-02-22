@@ -862,6 +862,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setWindowTitle("AiCore x SpatterSense")
+        self.setWindowIcon(QIcon("images/aicore.ico"))
         self.title_bar = TitleBar(self,self)
         self.setGeometry(100, 100, 1200, 800)
 
@@ -893,7 +894,12 @@ class MainWindow(QMainWindow):
 
         self.plotter3D = QtInteractor(self.viewer3D)
         self.plotter3D.installEventFilter(self)
-
+        self.picker = vtk.vtkCellPicker()
+        self.picker.SetTolerance(0.01)
+        self.plotter3D.iren.add_observer("KeyPressEvent",self.on_pick)
+        self.planes = []
+        self.mesh_map = {}
+        
         self.object_list = QListWidget(self.viewer3D)
         self.object_list.setFixedSize(120, 200) 
 
@@ -905,15 +911,15 @@ class MainWindow(QMainWindow):
         self.docker3d = QHBoxLayout()
         self.export = QPushButton("Export")
         self.add_head_btn = QPushButton("Add Head")
-        self.close_btn = QPushButton("Show Spatters")
-        self.close_btn.clicked.connect(lambda: (self.object_list.setVisible(not self.object_list.isVisible()),  self.close_btn.setText("Show Spatters" if self.object_list.isHidden() else "Hide Spatters")))
+        self.close_btn = QPushButton("Hide Spatters")
+        self.close_btn.clicked.connect(lambda: (self.object_list.setVisible(not self.object_list.isVisible()),  
+                                                self.close_btn.setText("Show Spatters" if self.object_list.isHidden() else "Hide Spatters")))
         self.add_head_btn.clicked.connect(self.add_head)
         self.export.clicked.connect(self.export_plotter)
         self.docker3d.addWidget(self.add_head_btn)
         self.docker3d.addWidget(self.export)
         self.docker3d.addWidget(self.close_btn)
         
-
         self.viewer_layout3D.addLayout(self.docker3d)
         self.viewer_layout3D.addWidget(self.plotter3D.interactor)
 
@@ -1095,6 +1101,18 @@ class MainWindow(QMainWindow):
         if obj == self.plotter3D and event.type() == QEvent.Resize:
             self.update_object_list_position()
         return super().eventFilter(obj, event)
+    
+    def on_pick(self, obj, event):
+        key = obj.GetKeySym()  
+        if key.lower() == "p": 
+            click_pos = self.plotter3D.iren.get_event_position()
+            self.picker.Pick(click_pos[0], click_pos[1], 0, self.plotter3D.renderer)
+
+            actor = self.picker.GetActor()
+            if actor and actor in self.mesh_map:
+                print(f"Picked: {self.mesh_map[actor]}")
+            else:
+                print("No valid selection.")
 
     def export_plotter(self):
         opt = QFileDialog.Options()
@@ -1391,7 +1409,9 @@ class MainWindow(QMainWindow):
             if position == "back":
                 rotationAngle = -90
                 back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
-                self.plotter3D.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
+                back = self.plotter3D.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
+                self.planes.append(back_plane)
+                self.mesh_map[back] = "Plane_Back"  
             elif position == "front":
                 rotationAngle = 90
                 front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
