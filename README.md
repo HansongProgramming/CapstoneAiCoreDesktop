@@ -1,10 +1,6 @@
 
-<img src="https://github.com/HansongProgramming/CapstoneAiCoreDesktop/blob/main/images/aicore.png">
-<p id="description">Artificial Intelligence in Crime Observations and Reconstruction Efficiency</p>
+<img src="https://github.com/HansongProgramming/CapstoneAiCoreDesktop/blob/main/images/SplashScreen.png">
 
-
-Developed By:
-<img src="https://github.com/HansongProgramming/CapstoneAiCoreDesktop/blob/main/images/Cre8Tive%20Sync.png">
 Flores Hans Harold L.
 Reburiano Augnina Krizel P.
   
@@ -12,7 +8,8 @@ Reburiano Augnina Krizel P.
 
 # AiCore: Artificial Intelligence for Crimescene Observation and Reconstruction Enhancement.
 
-AiCore is a cutting-edge AI-driven tool designed for bloodstain pattern analysis to automate calculations, crime scene reconstruction, and report generation. It leverages advanced 3D plotting, simulation, and computer vision technologies to assist forensic investigators in reconstructing crime scenes efficiently.
+AiCore is an AI-driven tool designed for bloodstain pattern analysis to automate calculations, crime scene reconstruction, and report generation. 
+It leverages advanced 3D plotting, simulation, and computer vision technologies to assist forensic investigators in reconstructing crime scenes efficiently.
 
 ---
 
@@ -144,6 +141,8 @@ For questions or support, feel free to contact:
 - **HansongProgramming**: [hlf1850@students.uc-bcf.edu.ph](mailto:hlf1850@students.uc-bcf.edu.ph)
 - GitHub: [github.com/HansongProgramming](https://github.com/HansongProgramming)
 
+- **Augnina**: [apr1299@students.uc-bcf.edu.ph](mailto:apr1299@students.uc-bcf.edu.ph)
+- GitHub: [github.com/Augnina](https://github.com/Augnina)
 ---
 
 ## Acknowledgments
