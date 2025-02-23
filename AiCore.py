@@ -1054,6 +1054,16 @@ class MainWindow(QMainWindow):
         self.delete_button = QPushButton("Delete Selected")
         self.delete_button.clicked.connect(self.delete_selected_object)
         self.sidebar_layout.addWidget(self.delete_button)
+        
+        rotate_90_btn = QPushButton("Rotate 90°")
+        rotate_neg_90_btn = QPushButton("Rotate -90°")
+        flip_h_btn = QPushButton("Flip Horizontal")
+        flip_v_btn = QPushButton("Flip Vertical")
+
+        self.sidebar_layout.addWidget(rotate_90_btn)
+        self.sidebar_layout.addWidget(rotate_neg_90_btn)
+        self.sidebar_layout.addWidget(flip_h_btn)
+        self.sidebar_layout.addWidget(flip_v_btn)
 
         self.sidebar_layout.addStretch()
 
@@ -1106,10 +1116,11 @@ class MainWindow(QMainWindow):
     def on_pick(self, obj, event):
         click_pos = self.plotter3D.iren.get_event_position()
         self.picker.Pick(click_pos[0], click_pos[1], 0, self.plotter3D.renderer)
-
+        
         actor = self.picker.GetActor()
         if actor and actor in self.mesh_map:
             self.selected_plane.setText(f"Selected Plane: {self.mesh_map[actor]}")
+            keyboard.press_and_release('p')
             index = self.texture_select.findText(self.mesh_map[actor])
             print(self.mesh_map[actor])
             print(index)
