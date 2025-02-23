@@ -2,3 +2,4 @@ models/
 output/
 Deprecatedmedia/
 AiCore/
+__pycache__/
