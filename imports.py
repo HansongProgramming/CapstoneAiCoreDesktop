@@ -5,11 +5,11 @@ from PyQt5.QtWidgets import (QFrame, QGridLayout, QApplication, QMainWindow, QLi
                              QMenu, QInputDialog, QMessageBox,QTabWidget, QDialog, 
                              QGraphicsDropShadowEffect,QGraphicsView,QGraphicsScene,
                              QGraphicsPixmapItem,QGraphicsRectItem,QCheckBox,QProgressDialog,
-                             QGraphicsEllipseItem, QStackedWidget, QShortcut
+                             QGraphicsEllipseItem, QStackedWidget
                              )
 from PyQt5.QtCore import (QSize, Qt, QPoint, pyqtSignal, Qt, QRectF, QLineF, QPointF,QEvent) 
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from PyQt5.QtGui import (QPixmap, QIcon, QImage, QColor,QPainter,QPen,QBrush,QCursor,QKeySequence,QKeyEvent)
+from PyQt5.QtGui import (QPixmap, QIcon, QImage, QColor,QPainter,QPen,QBrush,QCursor,QKeyEvent)
 from segment_anything import sam_model_registry, SamPredictor
 from sklearn.cluster import DBSCAN
 from pyvistaqt import QtInteractor
@@ -19,6 +19,7 @@ from PIL import Image
 import pyvista as pv
 import numpy as np
 import subprocess
+import keyboard
 import shutil
 import torch
 import json
