@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (QFrame, QGridLayout, QApplication, QMainWindow, QLi
                              )
 from PyQt5.QtCore import (QSize, Qt, QPoint, pyqtSignal, Qt, QRectF, QLineF, QPointF,QEvent) 
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from PyQt5.QtGui import (QPixmap, QIcon, QImage, QColor,QPainter,QPen,QBrush,QCursor,QKeySequence)
+from PyQt5.QtGui import (QPixmap, QIcon, QImage, QColor,QPainter,QPen,QBrush,QCursor,QKeySequence,QKeyEvent)
 from segment_anything import sam_model_registry, SamPredictor
 from sklearn.cluster import DBSCAN
 from pyvistaqt import QtInteractor
