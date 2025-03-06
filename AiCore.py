@@ -1586,104 +1586,63 @@ class MainWindow(QMainWindow):
             
         for segment in self.segments:
             self.generate_3d_line(segment)
+
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
-        self.label= segment["segment_number"]
-        self.angle = segment["angle"]
-        self.start_point_2d = segment["center"]
-        self.spatterCount = segment["spatter_count"]
-        self.end_point2d = segment["line_endpoints"]["negative_direction"]
-        self.impact_angles = []
 
+        # Extract segment details
+        label = segment["segment_number"]
+        angle = segment["angle"]
+        start_point_2d = segment["center"]
+        length = self.default_size[0]
         orientation = segment.get("origin", self.texture_select.currentText().lower())
 
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
-        self.impact_angles.append(abs(self.angle))
+        # Convert 2D start point to local coordinates
+        Ax = start_point_2d[0] - image_width / 2
+        Ay = -(start_point_2d[1] - image_height / 2)
+        start_point = np.array([Ax, Ay, 0])  # Line starts at center
 
-        Ax = self.start_point_2d[0] - image_width / 2
-        Ay = -(self.start_point_2d[1] - image_height / 2)
-        Az = 0
+        # Define default end point (before rotation)
+        end_offset = np.array([length, 0, 0])  # Line extends along X-axis by default
 
-        Bx = self.end_point2d[0] - image_width / 2
-        By = -(self.end_point2d[1] - image_height / 2)
-        
-        initAx = Ax
-        initAy = Ay
-        initBx = Bx
-        initBy = By
+        # Apply Z-axis rotation based on the segment angle
+        rotation = R.from_euler('z', angle, degrees=True)
+        rotated_offset = rotation.apply(end_offset)
+        end_point = start_point + rotated_offset  # Move endpoint from start
 
-        Bxy = math.sqrt(((initBx - (initAx))**2) + ((initBy - (initAy))**2))
-        angleInDeg = self.angle
-        Bxyz = math.sin(math.radians(angleInDeg))
-        self.Bz = (Bxyz * Bxy)
-
-        dx = Bx - Ax
-        dy = By - Ay
-        if dx == 0 and dy == 0:
-            self.direction = "No movement"
-        else:
-            angle = math.degrees(math.atan2(dy, dx))
-            if angle < 0:
-                angle += 360
-
-            if 22.5 <= angle < 67.5:
-                self.direction = "Northeast"
-            elif 67.5 <= angle < 112.5:
-                self.direction = "North"
-            elif 112.5 <= angle < 157.5:
-                self.direction = "Northwest"
-            elif 157.5 <= angle < 202.5:
-                self.direction = "West"
-            elif 202.5 <= angle < 247.5:
-                self.direction = "Southwest"
-            elif 247.5 <= angle < 292.5:
-                self.direction = "South" 
-            elif 292.5 <= angle < 337.5:
-                self.direction = "Southeast"
-            else:
-                self.direction = "East"
-        
-        if orientation == "right":
-            start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
-            end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
-        elif orientation == "left":
-            start_point = np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
-            end_point = np.array([(self.default_size[0] / 2 - Bx), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
-        elif orientation == "back":
-            start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-            end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1] /2 + By), (self.default_size[1] / 2 + By)])
-        elif orientation == "front":
-            start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-            end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
-        elif orientation == "floor":
-            start_point = np.array([Ax, Ay, Az])
-            end_point = np.array([Bx, By, abs(self.Bz)])
-
-
+        # Create the line
         line = pv.Line(start_point, end_point)
 
-        direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
-        
-        cone_position = start_point  
-        cone_height = 50  
+        # Calculate direction vector for cone (normalized)
+        direction_vector = (end_point - start_point) / np.linalg.norm(end_point - start_point)
+
+        # Create a cone at the tip of the arrow
+        cone_position = end_point
+        cone_height = 50  # Adjusted for visibility
         cone_radius = 3
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
 
-        self.plotter3D.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2),background_color=None,background_opacity=0.2,)
+        # Add elements to the plot
+        self.plotter3D.add_point_labels(
+            [start_point], [label], render_points_as_spheres=False,
+            font_size=12, text_color="white", shape_color=(0, 0, 0, 0.2),
+            background_color=None, background_opacity=0.2
+        )
         self.plotter3D.add_mesh(line, color=color, line_width=1.4)
         self.plotter3D.add_mesh(cone, color=color)
 
         self.plotter3D.update()
 
-
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
+        # Store the end points for averaging
         self.end_points.append(end_point)
         self.average_end_point = np.mean(self.end_points, axis=0)
-  
+
     def open_generate_report_dialog(self):
         self.report_dialog = GenerateReportDialog(self)
         self.report_dialog.exec_()

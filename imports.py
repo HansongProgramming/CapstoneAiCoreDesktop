@@ -11,6 +11,7 @@ from PyQt5.QtCore import (QSize, Qt, QPoint, pyqtSignal, Qt, QRectF, QLineF, QPo
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from PyQt5.QtGui import (QPixmap, QIcon, QImage, QColor,QPainter,QPen,QBrush,QCursor,QKeyEvent)
 from segment_anything import sam_model_registry, SamPredictor
+from scipy.spatial.transform import Rotation as R
 from sklearn.cluster import DBSCAN
 from pyvistaqt import QtInteractor
 from datetime import datetime
