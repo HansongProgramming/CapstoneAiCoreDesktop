@@ -724,8 +724,6 @@ class SegmentAndMap(QWidget):
         }
         return impact_angle, segment_data
 
-
-
     def calculate_angle(self, mask):
         y, x = np.where(mask > 0)
         center_x = np.mean(x)
@@ -759,8 +757,6 @@ class SegmentAndMap(QWidget):
         impact_angle = np.arcsin(width / length) * (180 / np.pi)  # Convert to degrees
         return impact_angle
 
-
-    
     def draw_convergence_area(self):
         intersections = self.calculate_intersections()
 
@@ -817,7 +813,6 @@ class SegmentAndMap(QWidget):
         intersect_y = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
 
         return intersect_x, intersect_y
-
 
     def draw_convergence_line(self, center_x, center_y, angle):
         step_size = 5
@@ -1617,43 +1612,46 @@ class MainWindow(QMainWindow):
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
-        # Convert 2D start point to local coordinates
         Ax = start_point_2d[0] - image_width / 2
         Ay = -(start_point_2d[1] - image_height / 2)
-        start_point = np.array([Ax, Ay, 0])  # Line starts at center
+        start_point = np.array([Ax, Ay, 0])  
+        end_offset = np.array([length, 0, 0])  
 
-        # Define default end point (before rotation)
-        end_offset = np.array([length, 0, 0])  # Line extends along X-axis by default
+        if orientation == "floor":
+            rotation_z = R.from_euler('z', -(90 - angle), degrees=True)
+            rotated_offset = rotation_z.apply(end_offset)
 
-        # Apply Z-axis rotation based on the segment angle
-# Rotate around Z first
-        rotation_z = R.from_euler('z', -(90 - angle), degrees=True)
-        rotated_offset = rotation_z.apply(end_offset)
+            rotation_x = R.from_euler('x', -impact, degrees=True)  
+            final_offset = rotation_x.apply(rotated_offset)
+            
+        elif orientation == "right":
+            start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
+            end_offset = np.array([length, 0, 0])  
+            rotation_z = R.from_euler('z', -(90 + angle), degrees=True)
+            rotated_offset = rotation_z.apply(end_offset)
 
-        # Rotate around X after Z rotation
-        rotation_x = R.from_euler('x', -impact, degrees=True)  # Replace x_angle with your desired X rotation
-        final_offset = rotation_x.apply(rotated_offset)
+            rotation_x = R.from_euler('x', impact, degrees=True)  
+            final_offset = rotation_x.apply(rotated_offset)    
+                
+        elif orientation == "left":
+            pass
+        elif orientation == "front":
+            pass
+        elif orientation == "back":
+            pass
 
-        # Compute the final endpoint
         end_point = start_point + final_offset
 
-        
-        
-
-        # Create the line
         line = pv.Line(start_point, end_point)
 
-        # Calculate direction vector for cone (normalized)
-        direction_vector = (end_point - start_point) / np.linalg.norm(end_point - start_point)
+        direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
 
-        # Create a cone at the tip of the arrow
-        cone_position = end_point
-        cone_height = 50  # Adjusted for visibility
+        cone_position = start_point
+        cone_height = 50 
         cone_radius = 3
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
 
-        # Add elements to the plot
         self.plotter3D.add_point_labels(
             [start_point], [label], render_points_as_spheres=False,
             font_size=12, text_color="white", shape_color=(0, 0, 0, 0.2),
