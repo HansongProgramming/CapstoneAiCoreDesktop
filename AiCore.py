@@ -1608,6 +1608,7 @@ class MainWindow(QMainWindow):
         # Extract segment details
         label = segment["segment_number"]
         angle = segment["angle"]
+        impact = segment["impact"]
         start_point_2d = segment["center"]
         length = self.default_size[0]
         orientation = segment.get("origin", self.texture_select.currentText().lower())
@@ -1625,9 +1626,19 @@ class MainWindow(QMainWindow):
         end_offset = np.array([length, 0, 0])  # Line extends along X-axis by default
 
         # Apply Z-axis rotation based on the segment angle
-        rotation = R.from_euler('z', -(90-angle), degrees=True)
-        rotated_offset = rotation.apply(end_offset)
-        end_point = start_point + rotated_offset  # Move endpoint from start
+# Rotate around Z first
+        rotation_z = R.from_euler('z', -(90 - angle), degrees=True)
+        rotated_offset = rotation_z.apply(end_offset)
+
+        # Rotate around X after Z rotation
+        rotation_x = R.from_euler('x', -impact, degrees=True)  # Replace x_angle with your desired X rotation
+        final_offset = rotation_x.apply(rotated_offset)
+
+        # Compute the final endpoint
+        end_point = start_point + final_offset
+
+        
+        
 
         # Create the line
         line = pv.Line(start_point, end_point)
