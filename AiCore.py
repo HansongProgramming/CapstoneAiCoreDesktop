@@ -480,7 +480,6 @@ class SegmentAndMap(QWidget):
         self.space_pressed = False
         self.init_ui()
 
-
     def init_ui(self):
         self.layout = QVBoxLayout(self)
         print(f"Running on: {self.device}")
@@ -699,21 +698,23 @@ class SegmentAndMap(QWidget):
 
     def process_spatter(self, mask):
         y, x = np.where(mask > 0)
-        
+
         center_x = int(np.mean(x))
         center_y = int(np.mean(y))
-        
-        angle = self.calculate_angle(mask)
-        
-        line_endpoints = self.draw_convergence_line(center_x, center_y, angle)
 
-        impact_angle = self.calculate_impact_angle(angle)
+        line_angle = self.calculate_angle(mask)  # Used for rotation
+
+        line_endpoints = self.draw_convergence_line(center_x, center_y, line_angle)
+
+        # 🔥 Corrected impact angle calculation using selection width/length
+        impact_angle = self.calculate_impact_angle(mask)
 
         num_spatters = len(self.segmented_masks)
 
         segment_data = {
-            "center": [center_x, center_y], 
-            "angle": float(impact_angle),  
+            "center": [center_x, center_y],
+            "angle": float(90-line_angle),  # Used for rotation
+            "impact": float(impact_angle),  # Corrected impact angle
             "line_endpoints": {
                 "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
                 "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
@@ -722,6 +723,8 @@ class SegmentAndMap(QWidget):
             "origin": self.position
         }
         return impact_angle, segment_data
+
+
 
     def calculate_angle(self, mask):
         y, x = np.where(mask > 0)
@@ -743,8 +746,20 @@ class SegmentAndMap(QWidget):
             angle = math.atan2(major_axis[1], major_axis[0]) * 180 / math.pi
             return angle
 
-    def calculate_impact_angle(self, angle):
-        return 90 - angle
+    def calculate_impact_angle(self, mask):
+        """Calculates the impact angle using the segmented width and length."""
+        y, x = np.where(mask > 0)
+
+        width = np.ptp(x)  # Width (X range)
+        length = np.ptp(y)  # Length (Y range)
+
+        if length == 0:  
+            return 0  # Avoid division by zero
+
+        impact_angle = np.arcsin(width / length) * (180 / np.pi)  # Convert to degrees
+        return impact_angle
+
+
     
     def draw_convergence_area(self):
         intersections = self.calculate_intersections()
@@ -1597,6 +1612,7 @@ class MainWindow(QMainWindow):
         length = self.default_size[0]
         orientation = segment.get("origin", self.texture_select.currentText().lower())
 
+        print(angle)
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
@@ -1609,7 +1625,7 @@ class MainWindow(QMainWindow):
         end_offset = np.array([length, 0, 0])  # Line extends along X-axis by default
 
         # Apply Z-axis rotation based on the segment angle
-        rotation = R.from_euler('z', angle, degrees=True)
+        rotation = R.from_euler('z', -(90-angle), degrees=True)
         rotated_offset = rotation.apply(end_offset)
         end_point = start_point + rotated_offset  # Move endpoint from start
 
