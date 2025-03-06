@@ -449,6 +449,40 @@ class TitleBar(QWidget):
         else:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, relative_path)
+
+class AnalysisThread(QThread):
+    progress_updated = pyqtSignal(int)
+    analysis_done = pyqtSignal(list)
+
+    def __init__(self, segment_map_instance, selection_boxes, predictor, image_np, device):
+        super().__init__()
+        self.segment_map = segment_map_instance  # ✅ Store reference to SegmentAndMap instance
+        self.selection_boxes = selection_boxes
+        self.predictor = predictor
+        self.image_np = image_np
+        self.device = device
+
+    def run(self):
+        """Runs the selection analysis in a separate thread."""
+        self.predictor.set_image(self.image_np)
+        results = []
+
+        for i, box in enumerate(self.selection_boxes):
+            input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
+            input_box = torch.tensor(input_box, device=self.device)
+
+            masks, _, _ = self.predictor.predict(box=input_box[None, :].cpu().numpy(), multimask_output=False)
+
+            if masks is not None and len(masks) > 0:
+                # ✅ Use the instance method correctly
+                impact_angle, segment_data = self.segment_map.process_spatter(masks[0])
+                results.append(segment_data)
+
+            self.progress_updated.emit(int((i + 1) / len(self.selection_boxes) * 100))  
+
+        self.analysis_done.emit(results)  
+
+
 class SegmentAndMap(QWidget):
     dataUpdated = pyqtSignal(str)  
 
@@ -634,42 +668,47 @@ class SegmentAndMap(QWidget):
         if self.analyzing or not self.selection_boxes:
             return
 
-        try:
-            self.analyzing = True
-            self.analyze_button.setEnabled(False)
-            progress = QProgressDialog("Analyzing selections...", None, 0, len(self.selection_boxes), self)
-            progress.setWindowModality(Qt.WindowModal)
-            progress.setMinimumDuration(0)
-            progress.setValue(0)
+        self.analyzing = True
+        self.analyze_button.setEnabled(False)
 
-            self.predictor.set_image(self.image_np)
+        # ✅ Create progress dialog
+        self.progress = QProgressDialog("Analyzing selections...", None, 0, 100, self)
+        self.progress.setWindowModality(Qt.WindowModal)
+        self.progress.setMinimumDuration(0)
+        self.progress.setValue(0)
 
-            for i, box in enumerate(self.selection_boxes):
-                input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
-                input_box = torch.tensor(input_box, device=self.device)
+        # ✅ Pass self as the first argument
+        self.analysis_thread = AnalysisThread(
+            self,  
+            self.selection_boxes, 
+            self.predictor, 
+            self.image_np, 
+            self.device
+        )
 
-                masks, _, _ = self.predictor.predict(box=input_box[None, :].cpu().numpy(), multimask_output=False)
+        self.analysis_thread.progress_updated.connect(self.update_progress)
+        self.analysis_thread.analysis_done.connect(self.on_analysis_complete)
 
-                if masks is not None and len(masks) > 0:
-                    mask_item = self.display_mask(masks[0])
-                    if mask_item:
-                        self.segmented_masks.append(mask_item)
-                        impact_angle, segment_data = self.process_spatter(masks[0])
-                        self.update_json(segment_data)
-                        json_data = json.dumps(segment_data)
-                        self.dataUpdated.emit(json_data)
+        self.analysis_thread.start()
 
-                progress.setValue(i + 1)
 
-            self.draw_convergence_area()
+    def update_progress(self, value):
+        """Updates progress bar in UI"""
+        self.progress.setValue(value)
 
-        except Exception as e:
-            print(f"Analysis error: {str(e)}")
+    def on_analysis_complete(self, results):
+        """Handles results after analysis finishes."""
+        for segment_data in results:
+            self.update_json(segment_data)
+            json_data = json.dumps(segment_data)
+            self.dataUpdated.emit(json_data)
 
-        finally:
-            self.analyzing = False
-            self.clear_selections()
-            progress.close()
+        QTimer.singleShot(0, self.draw_convergence_area)  # ✅ Runs after event loop resumes
+
+        self.analyzing = False
+        self.clear_selections()
+        self.progress.close()
+        self.analyze_button.setEnabled(True)
 
     def clear_selections(self):
         for rect in self.selection_rects:
@@ -754,7 +793,8 @@ class SegmentAndMap(QWidget):
         if length == 0:  
             return 0  # Avoid division by zero
 
-        impact_angle = np.arcsin(width / length) * (180 / np.pi)  # Convert to degrees
+        ratio = np.clip(width / length, -1.0, 1.0)  # ✅ Prevent invalid values
+        impact_angle = np.arcsin(ratio) * (180 / np.pi)  # Convert to degrees
         return impact_angle
 
     def draw_convergence_area(self):
@@ -1608,7 +1648,6 @@ class MainWindow(QMainWindow):
         length = self.default_size[0]
         orientation = segment.get("origin", self.texture_select.currentText().lower())
 
-        print(angle)
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
@@ -1618,27 +1657,45 @@ class MainWindow(QMainWindow):
         end_offset = np.array([length, 0, 0])  
 
         if orientation == "floor":
-            rotation_z = R.from_euler('z', -(90 - angle), degrees=True)
+            rotation_z = R.from_euler('z', -(90 - angle), degrees=True) if angle > 0 else R.from_euler('z', (90 + -(-angle)), degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', -impact, degrees=True)  
+            rotation_x = R.from_euler('x', -impact, degrees=True) if angle > 0 else R.from_euler('x', impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
             
         elif orientation == "right":
             start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
             end_offset = np.array([length, 0, 0])  
-            rotation_z = R.from_euler('z', -(90 + angle), degrees=True)
+            rotation_z = R.from_euler('z', -(90 + angle), degrees=True) if angle > 0 else  R.from_euler('z', (90 - angle), degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', impact, degrees=True)  
+            rotation_x = R.from_euler('x', impact, degrees=True)  if angle > 0 else R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)    
                 
         elif orientation == "left":
-            pass
+            start_point = np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
+            end_offset = np.array([length, 0, 0])  
+            rotation_z = R.from_euler('z', -(90 - angle), degrees=True) if angle > 0 else  R.from_euler('z', (90 - angle), degrees=True)
+            rotated_offset = rotation_z.apply(end_offset)
+
+            rotation_x = R.from_euler('x', impact, degrees=True)  if angle > 0 else R.from_euler('x', -impact, degrees=True)
+            final_offset = rotation_x.apply(rotated_offset) 
+
         elif orientation == "front":
-            pass
+            start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
+            rotation_z = R.from_euler('z', -(90 - angle), degrees=True) if angle > 0 else R.from_euler('z', (90 + -(-angle)), degrees=True)
+            rotated_offset = rotation_z.apply(end_offset)
+
+            rotation_x = R.from_euler('x', impact, degrees=True) if angle > 0 else R.from_euler('x', -impact, degrees=True)
+            final_offset = rotation_x.apply(rotated_offset)
+        
         elif orientation == "back":
-            pass
+            start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
+            rotation_z = R.from_euler('z', (90 - angle), degrees=True) if angle > 0 else R.from_euler('z', (90 + angle), degrees=True)
+            rotated_offset = rotation_z.apply(end_offset)
+
+            rotation_x = R.from_euler('x', -impact, degrees=True) if angle > 0 else R.from_euler('x', -impact, degrees=True)
+            final_offset = rotation_x.apply(rotated_offset)
 
         end_point = start_point + final_offset
 
