@@ -453,6 +453,7 @@ class TitleBar(QWidget):
 class AnalysisThread(QThread):
     progress_updated = pyqtSignal(int)
     analysis_done = pyqtSignal(list)
+    mask_ready = pyqtSignal(object, object)  # New signal for mask display
 
     def __init__(self, segment_map_instance, selection_boxes, predictor, image_np, device):
         super().__init__()
@@ -464,25 +465,36 @@ class AnalysisThread(QThread):
 
     def run(self):
         """Runs the selection analysis in a separate thread."""
-        self.predictor.set_image(self.image_np)
-        results = []
+        try:
+            self.predictor.set_image(self.image_np)
+            results = []
 
-        for i, box in enumerate(self.selection_boxes):
-            input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
-            input_box = torch.tensor(input_box, device=self.device)
+            for i, box in enumerate(self.selection_boxes):
+                # Convert box coordinates to tensor
+                input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
+                input_box = torch.tensor(input_box, device=self.device)
 
-            masks, _, _ = self.predictor.predict(box=input_box[None, :].cpu().numpy(), multimask_output=False)
+                # Get masks from predictor
+                masks, _, _ = self.predictor.predict(
+                    box=input_box[None, :].cpu().numpy(), 
+                    multimask_output=False
+                )
 
-            if masks is not None and len(masks) > 0:
-                # ✅ Use the instance method correctly
-                impact_angle, segment_data = self.segment_map.process_spatter(masks[0])
-                results.append(segment_data)
+                if masks is not None and len(masks) > 0:
+                    # Process mask in main thread
+                    self.mask_ready.emit(masks[0], i)
+                    
+                    # Calculate angles and data
+                    impact_angle, segment_data = self.segment_map.process_spatter(masks[0])
+                    results.append(segment_data)
 
-            self.progress_updated.emit(int((i + 1) / len(self.selection_boxes) * 100))  
+                # Update progress
+                self.progress_updated.emit(int((i + 1) / len(self.selection_boxes) * 100))
 
-        self.analysis_done.emit(results)  
+            self.analysis_done.emit(results)
 
-
+        except Exception as e:
+            print(f"Error in analysis thread: {e}")
 class SegmentAndMap(QWidget):
     dataUpdated = pyqtSignal(str)  
 
@@ -512,6 +524,7 @@ class SegmentAndMap(QWidget):
         self.analyzing = False  
         self.scale_factor = 1.0
         self.space_pressed = False
+        self.mask_display_queue = []
         self.init_ui()
 
     def init_ui(self):
@@ -671,27 +684,37 @@ class SegmentAndMap(QWidget):
         self.analyzing = True
         self.analyze_button.setEnabled(False)
 
-        # ✅ Create progress dialog
+        # Create progress dialog
         self.progress = QProgressDialog("Analyzing selections...", None, 0, 100, self)
         self.progress.setWindowModality(Qt.WindowModal)
         self.progress.setMinimumDuration(0)
         self.progress.setValue(0)
 
-        # ✅ Pass self as the first argument
+        # Create analysis thread with proper connections
         self.analysis_thread = AnalysisThread(
-            self,  
-            self.selection_boxes, 
-            self.predictor, 
-            self.image_np, 
+            self, 
+            self.selection_boxes,
+            self.predictor,
+            self.image_np,
             self.device
         )
 
         self.analysis_thread.progress_updated.connect(self.update_progress)
         self.analysis_thread.analysis_done.connect(self.on_analysis_complete)
+        self.analysis_thread.mask_ready.connect(self.queue_mask_display)
 
         self.analysis_thread.start()
+    def queue_mask_display(self, mask, index):
+        """Queue mask for display in main thread"""
+        self.mask_display_queue.append((mask, index))
+        QTimer.singleShot(0, self.process_mask_queue)
 
-
+    def process_mask_queue(self):
+        """Process queued masks in main thread"""
+        if self.mask_display_queue:
+            mask, index = self.mask_display_queue.pop(0)
+            self.display_mask(mask)
+            
     def update_progress(self, value):
         """Updates progress bar in UI"""
         self.progress.setValue(value)
@@ -784,18 +807,22 @@ class SegmentAndMap(QWidget):
             return angle
 
     def calculate_impact_angle(self, mask):
-        """Calculates the impact angle using the segmented width and length."""
+        """Calculates the impact angle with bounds checking"""
         y, x = np.where(mask > 0)
+        
+        if len(x) == 0 or len(y) == 0:
+            return 0.0
 
-        width = np.ptp(x)  # Width (X range)
-        length = np.ptp(y)  # Length (Y range)
+        width = np.ptp(x)
+        length = np.ptp(y)
 
-        if length == 0:  
-            return 0  # Avoid division by zero
+        if length == 0:
+            return 0.0
 
-        ratio = np.clip(width / length, -1.0, 1.0)  # ✅ Prevent invalid values
-        impact_angle = np.arcsin(ratio) * (180 / np.pi)  # Convert to degrees
-        return impact_angle
+        ratio = np.clip(width / length, -1.0, 1.0)
+        
+        impact_angle = np.arcsin(ratio) * (180 / np.pi)
+        return np.clip(impact_angle, -90.0, 90.0)  
 
     def draw_convergence_area(self):
         intersections = self.calculate_intersections()
@@ -1640,14 +1667,14 @@ class MainWindow(QMainWindow):
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
 
-        # Extract segment details
         label = segment["segment_number"]
         angle = segment["angle"]
         impact = segment["impact"]
         start_point_2d = segment["center"]
         length = self.default_size[0]
         orientation = segment.get("origin", self.texture_select.currentText().lower())
-
+        print(angle)
+        print(impact)
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
@@ -1696,6 +1723,7 @@ class MainWindow(QMainWindow):
 
             rotation_x = R.from_euler('x', -impact, degrees=True) if angle > 0 else R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
+            
 
         end_point = start_point + final_offset
 
