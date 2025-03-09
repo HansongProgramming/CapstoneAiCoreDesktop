@@ -44,10 +44,17 @@ class PyVistaApp(QWidget):
         self.y_input.editingFinished.connect(self.update_position)
         self.z_input.editingFinished.connect(self.update_position)
 
+        # Rotation Labels
+        self.rotation_labels = {
+            "X": QLabel("Rotate X: 0°"),
+            "Y": QLabel("Rotate Y: 0°"),
+            "Z": QLabel("Rotate Z: 0°")
+        }
+
         # Rotation Sliders
-        self.add_slider("Rotate X", sidebar_layout, self.rotate_x)
-        self.add_slider("Rotate Y", sidebar_layout, self.rotate_y)
-        self.add_slider("Rotate Z", sidebar_layout, self.rotate_z)
+        self.x_slider = self.add_slider("Rotate X", sidebar_layout, self.rotate_x, "X")
+        self.y_slider = self.add_slider("Rotate Y", sidebar_layout, self.rotate_y, "Y")
+        self.z_slider = self.add_slider("Rotate Z", sidebar_layout, self.rotate_z, "Z")
 
         # Create 3D scene
         self.create_wall()
@@ -71,13 +78,20 @@ class PyVistaApp(QWidget):
         self.cylinder = pv.Line(start, end)
         self.cylinder_actor = self.plotter.add_mesh(self.cylinder, color='white', line_width=5)
 
-    def add_slider(self, label, layout, callback):
-        layout.addWidget(QLabel(label))
+    def add_slider(self, label, layout, callback, axis):
+        """Adds a slider with a corresponding label for displaying rotation degrees."""
+        layout.addWidget(self.rotation_labels[axis])  # Display initial rotation
         slider = QSlider(Qt.Horizontal)
         slider.setMinimum(0)
         slider.setMaximum(360)
-        slider.valueChanged.connect(callback)
+        slider.valueChanged.connect(lambda value: self.update_rotation(value, axis, callback))
         layout.addWidget(slider)
+        return slider
+
+    def update_rotation(self, value, axis, callback):
+        """Updates the rotation label and applies the rotation callback."""
+        self.rotation_labels[axis].setText(f"Rotate {axis}: {value}°")
+        callback(value)  # Apply rotation
 
     def update_position(self):
         x = float(self.x_input.text())

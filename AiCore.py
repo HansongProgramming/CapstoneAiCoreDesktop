@@ -155,24 +155,20 @@ class MenuButton(QPushButton):
                 active_folder = folder_path
                 self.main_window.enableUI(canEnable)
 
-                # ✅ Reset the 3D Plotter to clear all previous objects
-                self.main_window.plotter3D.clear()  # Clears all actors
-                self.main_window.plotter3D.renderer.RemoveAllViewProps()  # Ensures complete reset
-                self.main_window.plotter3D.update()  # Force refresh
+                self.main_window.plotter3D.clear()  
+                self.main_window.plotter3D.renderer.RemoveAllViewProps() 
+                self.main_window.plotter3D.update()  
 
-                # ✅ Clear stored references to objects
                 self.main_window.segments.clear()
                 self.main_window.end_points.clear()
                 self.main_window.average_end_point = np.array([0.0, 0.0, 0.0])
                 self.main_window.label_Actors.clear()
 
-                # ✅ Reset UI elements related to analysis
                 self.main_window.stainCount.setText("Spatter Count: 0")
                 self.main_window.AngleReport.setText("Impact Angle: 0")
                 self.main_window.HeightReport.setText("Point of Origin: 0")
                 self.main_window.Conclusive.setText("")
 
-                # Load assets from the new case
                 assets_file = os.path.join(active_folder, "Assets.json")
                 if os.path.exists(assets_file):
                     try:
@@ -279,8 +275,8 @@ class EditButton(QPushButton):
                 }
             """)
             self.main_window.plotter3D.set_background("white")
-            self.main_window.plotter3D.renderer.SetBackground(1, 1, 1)  # Force white background
-            self.main_window.plotter3D.render()  # Force update
+            self.main_window.plotter3D.renderer.SetBackground(1, 1, 1)  
+            self.main_window.plotter3D.render()  
         else:
             stylesheet = self.main_window.load_stylesheet(self.main_window.get_resource_path("style/style.css"))
             self.theme_action.setText("Switch to Light Theme")
@@ -308,8 +304,8 @@ class EditButton(QPushButton):
                 }
             """)
             self.main_window.plotter3D.set_background("#3f3f3f")
-            self.main_window.plotter3D.renderer.SetBackground(0.25, 0.25, 0.25)  # Force dark gray background
-            self.main_window.plotter3D.render()  # Force update
+            self.main_window.plotter3D.renderer.SetBackground(0.25, 0.25, 0.25)  
+            self.main_window.plotter3D.render()  
 
 
         self.main_window.setStyleSheet(stylesheet)
@@ -543,6 +539,7 @@ class SegmentAndMap(QWidget):
         self.analyzing = False  
         self.scale_factor = 1.0
         self.space_pressed = False
+        self.is_positive = False
         self.mask_display_queue = []
         self.init_ui()
 
@@ -783,23 +780,19 @@ class SegmentAndMap(QWidget):
         center_x = int(np.mean(x))
         center_y = int(np.mean(y))
 
-        line_angle = self.calculate_angle(mask)  # Used for rotation
+        line_angle = self.calculate_angle(mask)  
 
         line_endpoints = self.draw_convergence_line(center_x, center_y, line_angle)
 
-        # 🔥 Corrected impact angle calculation using selection width/length
         impact_angle = self.calculate_impact_angle(mask)
 
         num_spatters = len(self.segmented_masks)
 
         segment_data = {
             "center": [center_x, center_y],
-            "angle": float(90-line_angle),  # Used for rotation
-            "impact": float(impact_angle),  # Corrected impact angle
-            "line_endpoints": {
-                "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
-                "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
-            },
+            "angle": float(90-line_angle),  
+            "impact": float(impact_angle),
+            "orientation": self.is_positive, 
             "spatter_count": num_spatters,
             "origin": self.position
         }
@@ -847,30 +840,38 @@ class SegmentAndMap(QWidget):
         intersections = self.calculate_intersections()
 
         if intersections:
-            # Convert intersections to numpy array
             points = np.array(intersections)
 
-            # Apply DBSCAN clustering to find dense clusters of intersection points
             clustering = DBSCAN(eps=20, min_samples=2).fit(points)
             labels = clustering.labels_
 
-            # Find the largest cluster (excluding noise points labeled as -1)
             unique_labels, counts = np.unique(labels[labels != -1], return_counts=True)
             if unique_labels.size > 0:
                 max_cluster_label = unique_labels[np.argmax(counts)]
                 cluster_points = points[labels == max_cluster_label]
 
-                # Compute the centroid of the most intersected cluster
                 avg_x, avg_y = np.mean(cluster_points, axis=0)
 
-                # Draw a bigger circle at the centroid of the densest cluster
-                radius = 30  # Increased radius size
+                print(f"Convergence Area Center: X = {avg_x}, Y = {avg_y}")
+                self.decision(avg_x, avg_y)
+                radius = 30  
                 circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
-                circle.setPen(QPen(Qt.blue, 3))  # Thicker blue outline
-                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))  # Semi-transparent fill
+                circle.setPen(QPen(Qt.blue, 3))  
+                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))  
                 circle.setZValue(3)
                 self.scene.addItem(circle)
-            
+                
+    def decision(self, x,y):
+        match (x,y):
+            case (a,b) if a < 0 and b < 0: # - -
+                self.is_positive = True
+            case (a,b) if a < 0 and b > 0: # - + 
+                self.is_positive = True
+            case (a,b) if a > 0 and b > 0: # - - 
+                self.is_positive = False
+            case (a,b) if a > 0 and b < 0: # + - 
+                self.is_positive = False
+                   
     def calculate_intersections(self):
         intersections = []
         lines = [line for pair in self.convergence_lines for line in pair]
@@ -1370,7 +1371,6 @@ class MainWindow(QMainWindow):
         with open(self.json_file, 'w') as file:
             json.dump(self.segments, file)
 
-        # Remove all 3D actors (including point labels)
         actors_to_remove = []
         for actor in self.plotter3D.renderer.GetActors():
             if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
@@ -1380,17 +1380,14 @@ class MainWindow(QMainWindow):
         for actor in actors_to_remove:
             self.plotter3D.renderer.RemoveActor(actor)
 
-        # Remove point labels
         if hasattr(self, 'label_actors') and self.label_actors:
             for actor in self.label_actors:
                 self.plotter3D.remove_actor(actor)
             self.label_actors.clear()
 
-        # Reset stored end points
         self.end_points = []
         self.average_end_point = np.array([0.0, 0.0, 0.0])
 
-        # Redraw remaining spatters
         for segment in self.segments:
             self.generate_3d_line(segment)
 
@@ -1639,7 +1636,6 @@ class MainWindow(QMainWindow):
     def update_from_interaction(self, json_data):
         self.load_objects_from_json()
         
-        # Clear all actors including point labels
         actors_to_remove = []
         for actor in self.plotter3D.renderer.GetActors():
             if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
@@ -1649,7 +1645,6 @@ class MainWindow(QMainWindow):
         for actor in actors_to_remove:
             self.plotter3D.renderer.RemoveActor(actor)
         
-        # Reset end points list when updating
         self.end_points = []
         self.average_end_point = np.array([0.0, 0.0, 0.0])
         
