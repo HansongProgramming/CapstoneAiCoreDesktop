@@ -770,13 +770,12 @@ class MainWindow(QMainWindow):
         self.update_object_list()
 
         label = segment["segment_number"]
-        angle = segment["angle"]
         impact = segment["impact"]
-        start_point_2d = segment["center"]
+        convergence = np.array(segment["convergence"])  
+        start_point_2d = np.array(segment["center"])
         length = self.default_size[0]
         orientation = segment.get("origin", self.texture_select.currentText().lower())
-        print(angle)
-        print(impact)
+
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
@@ -785,45 +784,63 @@ class MainWindow(QMainWindow):
         start_point = np.array([Ax, Ay, 0])  
         end_offset = np.array([length, 0, 0])  
 
+        Bx = convergence[0] - image_width / 2
+        By = -(convergence[1] - image_height / 2)
+        target_vector = np.array([Bx - Ax, By - Ay, 0])  
+
+        if np.linalg.norm(target_vector) != 0:
+            target_vector = target_vector / np.linalg.norm(target_vector)
+
+        default_direction = np.array([1, 0, 0]) 
+        rotation_axis = np.array([0, 0, 1])  
+
+        dot_product = np.dot(default_direction, target_vector)
+        angle_rad = np.arccos(np.clip(dot_product, -1.0, 1.0))  
+        angle_deg = np.degrees(angle_rad)
+
+        cross_product = np.cross(default_direction, target_vector)
+        if cross_product[2] < 0:  
+            angle_deg = -angle_deg
+
         if orientation == "floor":
-            rotation_z = R.from_euler('z', (90 + angle), degrees=True) if angle > 0 else R.from_euler('z', (90-angle), degrees=True)
+            rotation_z = R.from_euler('z', angle_deg, degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', impact, degrees=True) if angle > 0 else R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
             
         elif orientation == "right":
             start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
             end_offset = np.array([length, 0, 0])  
-            rotation_z = R.from_euler('z', -(90 + angle), degrees=True) if angle > 0 else  R.from_euler('z', (90 - angle), degrees=True)
+            rotation_z = R.from_euler('z', -(90 + angle_deg), degrees=True) if angle_deg > 0 else  R.from_euler('z', (90 - angle_deg), degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', impact, degrees=True)  if angle > 0 else R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('x', impact, degrees=True)  if angle_deg > 0 else R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)    
                 
         elif orientation == "left":
             start_point = np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
             end_offset = np.array([length, 0, 0])  
-            rotation_z = R.from_euler('z', -(90 - angle), degrees=True) if angle > 0 else  R.from_euler('z', (90 - angle), degrees=True)
+            rotation_z = R.from_euler('z', -(90 - angle_deg), degrees=True) if angle_deg > 0 else  R.from_euler('z', (90 - angle_deg), degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', impact, degrees=True)  if angle > 0 else R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('x', impact, degrees=True)  if angle_deg > 0 else R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset) 
 
         elif orientation == "front":
             start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-            rotation_z = R.from_euler('z', -(90 - angle), degrees=True) if angle > 0 else R.from_euler('z', (90 + -(-angle)), degrees=True)
+            rotation_z = R.from_euler('z', -(90 - angle_deg), degrees=True) if angle_deg > 0 else R.from_euler('z', (90 + -(-angle_deg)), degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', impact, degrees=True) if angle > 0 else R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('x', impact, degrees=True) if angle_deg > 0 else R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
         
         elif orientation == "back":
             start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-            rotation_z = R.from_euler('z', (90 - angle), degrees=True) if angle > 0 else R.from_euler('z', (90 + angle), degrees=True)
+            rotation_z = R.from_euler('z', (90 - angle_deg), degrees=True) if angle_deg > 0 else R.from_euler('z', (90 + angle_deg), degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', -impact, degrees=True) if angle > 0 else R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('x', -impact, degrees=True) if angle_deg > 0 else R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
             
 

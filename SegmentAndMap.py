@@ -89,7 +89,6 @@ class SegmentAndMap(QWidget):
         self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         
     def export_scene(self):
-        """Export the entire scene as a PNG image."""
         scene_rect = self.scene.sceneRect()
         
         image = QImage(int(scene_rect.width()), int(scene_rect.height()), QImage.Format_ARGB32)
@@ -188,13 +187,11 @@ class SegmentAndMap(QWidget):
         self.analyzing = True
         self.analyze_button.setEnabled(False)
 
-        # Create progress dialog
         self.progress = QProgressDialog("Analyzing selections...", None, 0, 100, self)
         self.progress.setWindowModality(Qt.WindowModal)
         self.progress.setMinimumDuration(0)
         self.progress.setValue(0)
 
-        # Create analysis thread with proper connections
         self.analysis_thread = AnalysisThread(
             self, 
             self.selection_boxes,
@@ -209,18 +206,15 @@ class SegmentAndMap(QWidget):
 
         self.analysis_thread.start()
     def queue_mask_display(self, mask, index):
-        """Queue mask for display in main thread"""
         self.mask_display_queue.append((mask, index))
         QTimer.singleShot(0, self.process_mask_queue)
 
     def process_mask_queue(self):
-        """Process queued masks in main thread"""
         if self.mask_display_queue:
             mask, index = self.mask_display_queue.pop(0)
             self.display_mask(mask)
             
     def update_progress(self, value):
-        """Updates progress bar in UI"""
         self.progress.setValue(value)
 
     def on_analysis_complete(self, results):
@@ -230,7 +224,7 @@ class SegmentAndMap(QWidget):
             json_data = json.dumps(segment_data)
             self.dataUpdated.emit(json_data)
 
-        QTimer.singleShot(0, self.draw_convergence_area)  # ✅ Runs after event loop resumes
+        QTimer.singleShot(0, self.draw_convergence_area)
 
         self.analyzing = False
         self.clear_selections()
@@ -276,16 +270,24 @@ class SegmentAndMap(QWidget):
 
         num_spatters = len(self.segmented_masks)
 
+        intersections = self.calculate_intersections()
+        if intersections:
+            avg_x, avg_y = np.mean(intersections, axis=0)
+            convergence_center = [int(avg_x), int(avg_y)]
+        else:
+            convergence_center = None
+
         segment_data = {
             "center": [center_x, center_y],
-            "angle": float(90-line_angle),  # Used for rotation
-            "impact": float(impact_angle),  # Corrected impact 
+            "angle": float(90 - line_angle),  
+            "impact": float(impact_angle),  
             "line_endpoints": {
                 "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
                 "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
             },
             "spatter_count": num_spatters,
-            "origin": self.position
+            "origin": self.position,
+            "convergence": convergence_center  
         }
         return impact_angle, segment_data
 
@@ -310,7 +312,6 @@ class SegmentAndMap(QWidget):
             return angle
 
     def calculate_impact_angle(self, mask):
-        """Calculates the impact angle with bounds checking"""
         y, x = np.where(mask > 0)
         
         if len(x) == 0 or len(y) == 0:
@@ -331,27 +332,22 @@ class SegmentAndMap(QWidget):
         intersections = self.calculate_intersections()
 
         if intersections:
-            # Convert intersections to numpy array
             points = np.array(intersections)
 
-            # Apply DBSCAN clustering to find dense clusters of intersection points
             clustering = DBSCAN(eps=20, min_samples=2).fit(points)
             labels = clustering.labels_
 
-            # Find the largest cluster (excluding noise points labeled as -1)
             unique_labels, counts = np.unique(labels[labels != -1], return_counts=True)
             if unique_labels.size > 0:
                 max_cluster_label = unique_labels[np.argmax(counts)]
                 cluster_points = points[labels == max_cluster_label]
 
-                # Compute the centroid of the most intersected cluster
                 avg_x, avg_y = np.mean(cluster_points, axis=0)
 
-                # Draw a bigger circle at the centroid of the densest cluster
-                radius = 30  # Increased radius size
+                radius = 30  
                 circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
-                circle.setPen(QPen(Qt.blue, 3))  # Thicker blue outline
-                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))  # Semi-transparent fill
+                circle.setPen(QPen(Qt.blue, 3))  
+                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))  
                 circle.setZValue(3)
                 self.scene.addItem(circle)
             
