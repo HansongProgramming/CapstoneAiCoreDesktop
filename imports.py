@@ -28,7 +28,6 @@ import math
 import sys
 import os
 
-
 from GenerateReportDialog import GenerateReportDialog
 from MenuButton import MenuButton
 from EditButton import EditButton

@@ -39,7 +39,6 @@ class MenuButton(QPushButton):
 
     def handleMenuAction(self, action):
         global canEnable
-        global active_folder
         if action.text() == "Exit":
             self.window().close()
         elif action.text() == "New Case":
@@ -60,41 +59,39 @@ class MenuButton(QPushButton):
                 os.makedirs(os.path.join(case_folder, "assets"), exist_ok=True)
                 
                 canEnable = True
-                active_folder = case_folder 
+                self.main_window.active_folder = case_folder 
                 self.main_window.enableUI(canEnable)
         elif action.text() == "Open":
             folder_path = QFileDialog.getExistingDirectory(self, "Select Directory for Case")
             if folder_path:
                 canEnable = True
-                active_folder = folder_path
+                self.main_window.active_folder = folder_path
+                self.main_window.load_objects_from_json()  
+                canEnable = True
                 self.main_window.enableUI(canEnable)
 
-                # ✅ Reset the 3D Plotter to clear all previous objects
-                self.main_window.plotter3D.clear()  # Clears all actors
-                self.main_window.plotter3D.renderer.RemoveAllViewProps()  # Ensures complete reset
-                self.main_window.plotter3D.update()  # Force refresh
+                self.main_window.plotter3D.clear()  
+                self.main_window.plotter3D.renderer.RemoveAllViewProps()  
+                self.main_window.plotter3D.update()  
 
-                # ✅ Clear stored references to objects
                 self.main_window.segments.clear()
                 self.main_window.end_points.clear()
                 self.main_window.average_end_point = np.array([0.0, 0.0, 0.0])
                 self.main_window.label_Actors.clear()
 
-                # ✅ Reset UI elements related to analysis
                 self.main_window.stainCount.setText("Spatter Count: 0")
                 self.main_window.AngleReport.setText("Impact Angle: 0")
                 self.main_window.HeightReport.setText("Point of Origin: 0")
                 self.main_window.Conclusive.setText("")
 
-                # Load assets from the new case
-                assets_file = os.path.join(active_folder, "Assets.json")
+                assets_file = os.path.join(self.main_window.active_folder, "Assets.json")
                 if os.path.exists(assets_file):
                     try:
                         with open(assets_file, 'r') as f:
                             assets_data = json.load(f)
 
                         for position, relative_path in assets_data.items():
-                            full_path = os.path.join(active_folder, relative_path)
+                            full_path = os.path.join(self.main_window.active_folder, relative_path)
                             if os.path.exists(full_path):
                                 texture = pv.read_texture(full_path)
                                 img = QImage(full_path)
