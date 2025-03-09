@@ -1,18 +1,4 @@
-import numpy as np
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGraphicsView, 
-                           QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem, 
-                           QPushButton, QLabel, QCheckBox, QProgressDialog,
-                           QGraphicsEllipseItem, QFileDialog,)
-from PyQt5.QtCore import Qt, QRectF, pyqtSignal, QLineF, QPointF
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QBrush, QImage, QCursor, QColor
-from segment_anything import sam_model_registry, SamPredictor
-from sklearn.cluster import DBSCAN
-import os
-import math
-import json
-import torch
-import sys
-
+from imports import *
 class SegmentAndMap(QWidget):
     dataUpdated = pyqtSignal(str)  
 
@@ -42,8 +28,8 @@ class SegmentAndMap(QWidget):
         self.analyzing = False  
         self.scale_factor = 1.0
         self.space_pressed = False
+        self.mask_display_queue = []
         self.init_ui()
-
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
@@ -199,42 +185,57 @@ class SegmentAndMap(QWidget):
         if self.analyzing or not self.selection_boxes:
             return
 
-        try:
-            self.analyzing = True
-            self.analyze_button.setEnabled(False)
-            progress = QProgressDialog("Analyzing selections...", None, 0, len(self.selection_boxes), self)
-            progress.setWindowModality(Qt.WindowModal)
-            progress.setMinimumDuration(0)
-            progress.setValue(0)
+        self.analyzing = True
+        self.analyze_button.setEnabled(False)
 
-            self.predictor.set_image(self.image_np)
+        # Create progress dialog
+        self.progress = QProgressDialog("Analyzing selections...", None, 0, 100, self)
+        self.progress.setWindowModality(Qt.WindowModal)
+        self.progress.setMinimumDuration(0)
+        self.progress.setValue(0)
 
-            for i, box in enumerate(self.selection_boxes):
-                input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
-                input_box = torch.tensor(input_box, device=self.device)
+        # Create analysis thread with proper connections
+        self.analysis_thread = AnalysisThread(
+            self, 
+            self.selection_boxes,
+            self.predictor,
+            self.image_np,
+            self.device
+        )
 
-                masks, _, _ = self.predictor.predict(box=input_box[None, :].cpu().numpy(), multimask_output=False)
+        self.analysis_thread.progress_updated.connect(self.update_progress)
+        self.analysis_thread.analysis_done.connect(self.on_analysis_complete)
+        self.analysis_thread.mask_ready.connect(self.queue_mask_display)
 
-                if masks is not None and len(masks) > 0:
-                    mask_item = self.display_mask(masks[0])
-                    if mask_item:
-                        self.segmented_masks.append(mask_item)
-                        impact_angle, segment_data = self.process_spatter(masks[0])
-                        self.update_json(segment_data)
-                        json_data = json.dumps(segment_data)
-                        self.dataUpdated.emit(json_data)
+        self.analysis_thread.start()
+    def queue_mask_display(self, mask, index):
+        """Queue mask for display in main thread"""
+        self.mask_display_queue.append((mask, index))
+        QTimer.singleShot(0, self.process_mask_queue)
 
-                progress.setValue(i + 1)
+    def process_mask_queue(self):
+        """Process queued masks in main thread"""
+        if self.mask_display_queue:
+            mask, index = self.mask_display_queue.pop(0)
+            self.display_mask(mask)
+            
+    def update_progress(self, value):
+        """Updates progress bar in UI"""
+        self.progress.setValue(value)
 
-            self.draw_convergence_area()
+    def on_analysis_complete(self, results):
+        """Handles results after analysis finishes."""
+        for segment_data in results:
+            self.update_json(segment_data)
+            json_data = json.dumps(segment_data)
+            self.dataUpdated.emit(json_data)
 
-        except Exception as e:
-            print(f"Analysis error: {str(e)}")
+        QTimer.singleShot(0, self.draw_convergence_area)  # ✅ Runs after event loop resumes
 
-        finally:
-            self.analyzing = False
-            self.clear_selections()
-            progress.close()
+        self.analyzing = False
+        self.clear_selections()
+        self.progress.close()
+        self.analyze_button.setEnabled(True)
 
     def clear_selections(self):
         for rect in self.selection_rects:
@@ -263,21 +264,22 @@ class SegmentAndMap(QWidget):
 
     def process_spatter(self, mask):
         y, x = np.where(mask > 0)
-        
+
         center_x = int(np.mean(x))
         center_y = int(np.mean(y))
-        
-        angle = self.calculate_angle(mask)
-        
-        line_endpoints = self.draw_convergence_line(center_x, center_y, angle)
 
-        impact_angle = self.calculate_impact_angle(angle)
+        line_angle = self.calculate_angle(mask)  
+
+        line_endpoints = self.draw_convergence_line(center_x, center_y, line_angle)
+
+        impact_angle = self.calculate_impact_angle(mask)
 
         num_spatters = len(self.segmented_masks)
 
         segment_data = {
-            "center": [center_x, center_y], 
-            "angle": float(impact_angle),  
+            "center": [center_x, center_y],
+            "angle": float(90-line_angle),  # Used for rotation
+            "impact": float(impact_angle),  # Corrected impact 
             "line_endpoints": {
                 "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
                 "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
@@ -307,9 +309,24 @@ class SegmentAndMap(QWidget):
             angle = math.atan2(major_axis[1], major_axis[0]) * 180 / math.pi
             return angle
 
-    def calculate_impact_angle(self, angle):
-        return 90 - angle
-    
+    def calculate_impact_angle(self, mask):
+        """Calculates the impact angle with bounds checking"""
+        y, x = np.where(mask > 0)
+        
+        if len(x) == 0 or len(y) == 0:
+            return 0.0
+
+        width = np.ptp(x)
+        length = np.ptp(y)
+
+        if length == 0:
+            return 0.0
+
+        ratio = np.clip(width / length, -1.0, 1.0)
+        
+        impact_angle = np.arcsin(ratio) * (180 / np.pi)
+        return np.clip(impact_angle, -90.0, 90.0)  
+
     def draw_convergence_area(self):
         intersections = self.calculate_intersections()
 
@@ -366,7 +383,6 @@ class SegmentAndMap(QWidget):
         intersect_y = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
 
         return intersect_x, intersect_y
-
 
     def draw_convergence_line(self, center_x, center_y, angle):
         step_size = 5
