@@ -154,13 +154,31 @@ class MenuButton(QPushButton):
                 canEnable = True
                 active_folder = folder_path
                 self.main_window.enableUI(canEnable)
-                
+
+                # ✅ Reset the 3D Plotter to clear all previous objects
+                self.main_window.plotter3D.clear()  # Clears all actors
+                self.main_window.plotter3D.renderer.RemoveAllViewProps()  # Ensures complete reset
+                self.main_window.plotter3D.update()  # Force refresh
+
+                # ✅ Clear stored references to objects
+                self.main_window.segments.clear()
+                self.main_window.end_points.clear()
+                self.main_window.average_end_point = np.array([0.0, 0.0, 0.0])
+                self.main_window.label_Actors.clear()
+
+                # ✅ Reset UI elements related to analysis
+                self.main_window.stainCount.setText("Spatter Count: 0")
+                self.main_window.AngleReport.setText("Impact Angle: 0")
+                self.main_window.HeightReport.setText("Point of Origin: 0")
+                self.main_window.Conclusive.setText("")
+
+                # Load assets from the new case
                 assets_file = os.path.join(active_folder, "Assets.json")
                 if os.path.exists(assets_file):
                     try:
                         with open(assets_file, 'r') as f:
                             assets_data = json.load(f)
-                        
+
                         for position, relative_path in assets_data.items():
                             full_path = os.path.join(active_folder, relative_path)
                             if os.path.exists(full_path):
@@ -168,16 +186,17 @@ class MenuButton(QPushButton):
                                 img = QImage(full_path)
                                 width = img.width()
                                 height = img.height()
-                                
+
                                 self.main_window.default_size = (width, height)
                                 self.main_window.textures[position] = texture
                                 self.main_window.image_paths[position] = full_path
-                                
+
                                 self.main_window.add_plane_with_image(position)
                     except Exception as e:
                         QMessageBox.warning(self, "Error", f"Failed to load assets: {e}")
-                
+
                 self.main_window.load_objects_from_json()
+
         elif action.text() == "Generate Report": 
             self.main_window.open_generate_report_dialog()
 class EditButton(QPushButton):
@@ -952,6 +971,7 @@ class MainWindow(QMainWindow):
         self.image_paths = {}
         self.segments = []
         self.end_points =[]
+        self.label_Actors = []
         self.average_end_point = np.array([0.0, 0.0, 0.0])  
         self.previous_data = None  
 
@@ -1349,19 +1369,31 @@ class MainWindow(QMainWindow):
 
         with open(self.json_file, 'w') as file:
             json.dump(self.segments, file)
-            
+
+        # Remove all 3D actors (including point labels)
         actors_to_remove = []
-        for actor in self.plotter3D.renderer.actors.values():
-            if isinstance(actor, vtk.vtkActor):
+        for actor in self.plotter3D.renderer.GetActors():
+            if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
                 if not actor.GetTexture():
                     actors_to_remove.append(actor)
-            
+
         for actor in actors_to_remove:
             self.plotter3D.renderer.RemoveActor(actor)
-            
+
+        # Remove point labels
+        if hasattr(self, 'label_actors') and self.label_actors:
+            for actor in self.label_actors:
+                self.plotter3D.remove_actor(actor)
+            self.label_actors.clear()
+
+        # Reset stored end points
+        self.end_points = []
+        self.average_end_point = np.array([0.0, 0.0, 0.0])
+
+        # Redraw remaining spatters
         for segment in self.segments:
             self.generate_3d_line(segment)
-      
+
     def load_stylesheet(self, file_path):
         with open(file_path, 'r') as f:
             return f.read()
@@ -1456,6 +1488,20 @@ class MainWindow(QMainWindow):
             return
 
         if texture:
+            # Clear all existing point labels before adding new plane
+            actors_to_remove = []
+            for actor in self.plotter3D.renderer.GetActors():
+                if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
+                    if not actor.GetTexture():
+                        actors_to_remove.append(actor)
+            
+            for actor in actors_to_remove:
+                self.plotter3D.renderer.RemoveActor(actor)
+
+            # Reset end points list when changing planes
+            self.end_points = []
+            self.average_end_point = np.array([0.0, 0.0, 0.0])
+
             self.textures[position] = texture
             self.image_paths[position] = new_image_path
             self.create_plane(position, new_width, new_height, texture)
@@ -1593,14 +1639,19 @@ class MainWindow(QMainWindow):
     def update_from_interaction(self, json_data):
         self.load_objects_from_json()
         
+        # Clear all actors including point labels
         actors_to_remove = []
-        for actor in self.plotter3D.renderer.actors.values():
-            if isinstance(actor, vtk.vtkActor):
+        for actor in self.plotter3D.renderer.GetActors():
+            if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
                 if not actor.GetTexture():
                     actors_to_remove.append(actor)
         
         for actor in actors_to_remove:
             self.plotter3D.renderer.RemoveActor(actor)
+        
+        # Reset end points list when updating
+        self.end_points = []
+        self.average_end_point = np.array([0.0, 0.0, 0.0])
         
         try:
             with open(self.json_file, 'r') as file:
@@ -1664,7 +1715,7 @@ class MainWindow(QMainWindow):
         for segment in self.segments:
             self.generate_3d_line(segment)
 
-    def generate_3d_line(self, segment, color="red"):
+    def generate_3d_line(self, segment, color="red"):          
         self.update_object_list()
 
         label = segment["segment_number"]
@@ -1684,10 +1735,10 @@ class MainWindow(QMainWindow):
         end_offset = np.array([length, 0, 0])  
 
         if orientation == "floor":
-            rotation_z = R.from_euler('z', -(90 - angle), degrees=True) if angle > 0 else R.from_euler('z', (90 + -(-angle)), degrees=True)
+            rotation_z = R.from_euler('z', (90 + angle), degrees=True) if angle > 0 else R.from_euler('z', (90-angle), degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', -impact, degrees=True) if angle > 0 else R.from_euler('x', impact, degrees=True)
+            rotation_x = R.from_euler('x', impact, degrees=True) if angle > 0 else R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
             
         elif orientation == "right":
@@ -1736,12 +1787,15 @@ class MainWindow(QMainWindow):
         cone_radius = 3
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
-
-        self.plotter3D.add_point_labels(
+        
+        actor = self.plotter3D.add_point_labels(
             [start_point], [label], render_points_as_spheres=False,
             font_size=12, text_color="white", shape_color=(0, 0, 0, 0.2),
             background_color=None, background_opacity=0.2
         )
+        
+        self.label_Actors.append(actor)
+        
         self.plotter3D.add_mesh(line, color=color, line_width=1.4)
         self.plotter3D.add_mesh(cone, color=color)
 
