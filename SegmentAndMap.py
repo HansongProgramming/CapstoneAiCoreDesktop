@@ -263,9 +263,7 @@ class SegmentAndMap(QWidget):
         center_y = int(np.mean(y))
 
         line_angle = self.calculate_angle(mask)  
-
         line_endpoints = self.draw_convergence_line(center_x, center_y, line_angle)
-
         impact_angle = self.calculate_impact_angle(mask)
 
         num_spatters = len(self.segmented_masks)
@@ -277,19 +275,32 @@ class SegmentAndMap(QWidget):
         else:
             convergence_center = None
 
+        if convergence_center:
+            dx = convergence_center[0] - center_x
+            dy = convergence_center[1] - center_y
+
+            raw_angle = math.degrees(math.atan2(dy, dx))  
+            angle_3d = -raw_angle  
+
+        else:
+            angle_3d = None 
+
         segment_data = {
             "center": [center_x, center_y],
-            "angle": float(90 - line_angle),  
-            "impact": float(impact_angle),  
-            "line_endpoints": {
-                "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
-                "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
-            },
-            "spatter_count": num_spatters,
-            "origin": self.position,
-            "convergence": convergence_center  
+        "angle": float(90 - line_angle),  
+        "impact": float(impact_angle),  
+        "line_endpoints": {
+            "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
+            "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
+        },
+        "spatter_count": num_spatters,
+        "origin": self.position,
+        "convergence_center": convergence_center,  
+        "convergence_angle_3d": angle_3d  # ✅ New field
         }
+        
         return impact_angle, segment_data
+
 
     def calculate_angle(self, mask):
         y, x = np.where(mask > 0)
