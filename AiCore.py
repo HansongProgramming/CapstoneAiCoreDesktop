@@ -771,7 +771,7 @@ class MainWindow(QMainWindow):
 
         label = segment["segment_number"]
         impact = segment["impact"]
-        convergence = np.array(segment["convergence"])  
+        convergence = np.array(segment["convergence_angle_3d"])  
         start_point_2d = np.array(segment["center"])
         length = self.default_size[0]
         orientation = segment.get("origin", self.texture_select.currentText().lower())
@@ -783,24 +783,6 @@ class MainWindow(QMainWindow):
         Ay = -(start_point_2d[1] - image_height / 2)
         start_point = np.array([Ax, Ay, 0])  
         end_offset = np.array([length, 0, 0])  
-
-        Bx = convergence[0] - image_width / 2
-        By = -(convergence[1] - image_height / 2)
-        target_vector = np.array([Bx - Ax, By - Ay, 0])  
-
-        if np.linalg.norm(target_vector) != 0:
-            target_vector = target_vector / np.linalg.norm(target_vector)
-
-        default_direction = np.array([1, 0, 0]) 
-        rotation_axis = np.array([0, 0, 1])  
-
-        dot_product = np.dot(default_direction, target_vector)
-        angle_rad = np.arccos(np.clip(dot_product, -1.0, 1.0))  
-        angle_deg = np.degrees(angle_rad)
-
-        cross_product = np.cross(default_direction, target_vector)
-        if cross_product[2] < 0:  
-            angle_deg = -angle_deg
 
         if orientation == "floor":
             rotation_z = R.from_euler('z', angle_deg, degrees=True)
