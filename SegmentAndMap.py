@@ -194,10 +194,8 @@ class SegmentAndMap(QWidget):
 
         results = []
 
-        # 🔹 Set the image before running predictions
         self.predictor.set_image(self.image_np)
 
-        # 🔹 Step 1: Generate convergence lines for all spatters
         for i, box in enumerate(self.selection_boxes):
             input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
             input_box = torch.tensor(input_box, device=self.device)
@@ -208,10 +206,9 @@ class SegmentAndMap(QWidget):
             )
 
             if masks is not None and len(masks) > 0:
-                self.display_mask(masks[0])  # 🔹 Directly show the mask instead of emitting a signal
-                self.process_spatter(masks[0])  # Just generate lines, don't return data yet
+                self.display_mask(masks[0]) 
+                self.process_spatter(masks[0]) 
 
-        # 🔹 Step 2: Compute convergence area after all lines are drawn
         self.draw_convergence_area()
 
         if not hasattr(self, "convergence_area_center") or not hasattr(self, "convergence_area_radius"):
@@ -220,7 +217,6 @@ class SegmentAndMap(QWidget):
             self.analyze_button.setEnabled(True)
             return  
 
-        # 🔹 Step 3: Process all spatters now that the convergence area exists
         for i, box in enumerate(self.selection_boxes):
             input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
             input_box = torch.tensor(input_box, device=self.device)
@@ -231,10 +227,9 @@ class SegmentAndMap(QWidget):
             )
 
             if masks is not None and len(masks) > 0:
-                impact_angle, segment_data = self.process_spatter(masks[0])  # Now we retrieve valid data
+                impact_angle, segment_data = self.process_spatter(masks[0])  
                 results.append(segment_data)
 
-        # 🔹 Step 4: Now write all processed data to JSON
         for segment_data in results:
             self.update_json(segment_data)
             json_data = json.dumps(segment_data)
@@ -244,8 +239,6 @@ class SegmentAndMap(QWidget):
         self.clear_selections()
         self.progress.close()
         self.analyze_button.setEnabled(True)
-
-
 
     def queue_mask_display(self, mask, index):
         self.mask_display_queue.append((mask, index))
@@ -429,7 +422,14 @@ class SegmentAndMap(QWidget):
 
         if discriminant < 0:
             print("[WARNING] No intersection found!")
-            return None  
+
+            # 🔹 Instead of returning None, pick the closest endpoint
+            dist1 = math.sqrt((x1 - cx) ** 2 + (y1 - cy) ** 2)
+            dist2 = math.sqrt((x2 - cx) ** 2 + (y2 - cy) ** 2)
+            
+            closest_point = (x1, y1) if dist1 < dist2 else (x2, y2)
+            print(f"[INFO] No intersection, using closest point: {closest_point}")
+            return closest_point  # Return the closest valid point
 
         discriminant = math.sqrt(discriminant)
 
@@ -438,7 +438,7 @@ class SegmentAndMap(QWidget):
 
         intersections = []
         for t in [t1, t2]:
-            if 0 <= t <= 1:
+            if 0 <= t <= 1:  # Only take intersections that are on the line segment
                 inter_x = x1 + t * dx
                 inter_y = y1 + t * dy
                 intersections.append((inter_x, inter_y))
@@ -446,8 +446,15 @@ class SegmentAndMap(QWidget):
         if intersections:
             print(f"[DEBUG] Intersection found at {intersections[0]}")
             return intersections[0]  
-        print("[WARNING] No valid intersection found in range!")
-        return None
+
+        # 🔹 If no valid intersection is found, use the closest endpoint
+        dist1 = math.sqrt((x1 - cx) ** 2 + (y1 - cy) ** 2)
+        dist2 = math.sqrt((x2 - cx) ** 2 + (y2 - cy) ** 2)
+        
+        closest_point = (x1, y1) if dist1 < dist2 else (x2, y2)
+        print(f"[INFO] No valid intersection, using closest point: {closest_point}")
+        return closest_point
+
 
     def calculate_intersections(self):
         intersections = []
