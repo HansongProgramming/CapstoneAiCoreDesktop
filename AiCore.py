@@ -784,13 +784,14 @@ class MainWindow(QMainWindow):
         start_point = np.array([Ax, Ay, 0])  
         end_offset = np.array([length, 0, 0])  
         
-        print(convergence)
+        if convergence < 0:
+            impact = - impact
         
         if orientation == "floor":
             rotation_z = R.from_euler('z', convergence, degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('x', impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
             
         elif orientation == "right":
@@ -799,7 +800,7 @@ class MainWindow(QMainWindow):
             rotation_z = R.from_euler('z', -(90 + convergence), degrees=True) if convergence > 0 else  R.from_euler('z', (90 - convergence), degrees=True)
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', impact, degrees=True)  if convergence > 0 else R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('x', impact, degrees=True)  if convergence < 0 else R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)    
                 
         elif orientation == "left":
