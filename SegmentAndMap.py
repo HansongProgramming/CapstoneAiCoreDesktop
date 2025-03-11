@@ -192,19 +192,61 @@ class SegmentAndMap(QWidget):
         self.progress.setMinimumDuration(0)
         self.progress.setValue(0)
 
-        self.analysis_thread = AnalysisThread(
-            self, 
-            self.selection_boxes,
-            self.predictor,
-            self.image_np,
-            self.device
-        )
+        results = []
 
-        self.analysis_thread.progress_updated.connect(self.update_progress)
-        self.analysis_thread.analysis_done.connect(self.on_analysis_complete)
-        self.analysis_thread.mask_ready.connect(self.queue_mask_display)
+        # 🔹 Set the image before running predictions
+        self.predictor.set_image(self.image_np)
 
-        self.analysis_thread.start()
+        # 🔹 Step 1: Generate convergence lines for all spatters
+        for i, box in enumerate(self.selection_boxes):
+            input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
+            input_box = torch.tensor(input_box, device=self.device)
+
+            masks, _, _ = self.predictor.predict(
+                box=input_box[None, :].cpu().numpy(),
+                multimask_output=False
+            )
+
+            if masks is not None and len(masks) > 0:
+                self.display_mask(masks[0])  # 🔹 Directly show the mask instead of emitting a signal
+                self.process_spatter(masks[0])  # Just generate lines, don't return data yet
+
+        # 🔹 Step 2: Compute convergence area after all lines are drawn
+        self.draw_convergence_area()
+
+        if not hasattr(self, "convergence_area_center") or not hasattr(self, "convergence_area_radius"):
+            print("[ERROR] Convergence Area is NOT defined after drawing!")
+            self.analyzing = False
+            self.analyze_button.setEnabled(True)
+            return  
+
+        # 🔹 Step 3: Process all spatters now that the convergence area exists
+        for i, box in enumerate(self.selection_boxes):
+            input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
+            input_box = torch.tensor(input_box, device=self.device)
+
+            masks, _, _ = self.predictor.predict(
+                box=input_box[None, :].cpu().numpy(),
+                multimask_output=False
+            )
+
+            if masks is not None and len(masks) > 0:
+                impact_angle, segment_data = self.process_spatter(masks[0])  # Now we retrieve valid data
+                results.append(segment_data)
+
+        # 🔹 Step 4: Now write all processed data to JSON
+        for segment_data in results:
+            self.update_json(segment_data)
+            json_data = json.dumps(segment_data)
+            self.dataUpdated.emit(json_data)
+
+        self.analyzing = False
+        self.clear_selections()
+        self.progress.close()
+        self.analyze_button.setEnabled(True)
+
+
+
     def queue_mask_display(self, mask, index):
         self.mask_display_queue.append((mask, index))
         QTimer.singleShot(0, self.process_mask_queue)
@@ -267,39 +309,42 @@ class SegmentAndMap(QWidget):
         impact_angle = self.calculate_impact_angle(mask)
 
         num_spatters = len(self.segmented_masks)
-
-        intersections = self.calculate_intersections()
-        if intersections:
-            avg_x, avg_y = np.mean(intersections, axis=0)
-            convergence_center = [int(avg_x), int(avg_y)]
+        
+        if hasattr(self, "convergence_area_center") and hasattr(self, "convergence_area_radius"):
+            print(f"[DEBUG] Using Convergence Area: Center={self.convergence_area_center}, Radius={self.convergence_area_radius}")
         else:
-            convergence_center = None
+            print("[ERROR] Convergence Area is NOT defined!")
 
-        if convergence_center:
-            dx = convergence_center[0] - center_x
-            dy = convergence_center[1] - center_y
 
+        if hasattr(self, "convergence_area_center") and hasattr(self, "convergence_area_radius"):
+            entry_point = self.find_line_circle_intersection(line_endpoints, self.convergence_area_center, self.convergence_area_radius)
+        else:
+            entry_point = None
+
+        if entry_point:
+            dx = entry_point[0] - center_x
+            dy = entry_point[1] - center_y
             raw_angle = math.degrees(math.atan2(dy, dx))  
             angle_3d = -raw_angle  
-
         else:
-            angle_3d = None 
+            angle_3d = None  
 
         segment_data = {
             "center": [center_x, center_y],
-        "angle": float(90 - line_angle),  
-        "impact": float(impact_angle),  
-        "line_endpoints": {
-            "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
-            "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
-        },
-        "spatter_count": num_spatters,
-        "origin": self.position,
-        "convergence_center": convergence_center,  
-        "convergence_angle_3d": angle_3d  # ✅ New field
+            "angle": float(90 - line_angle),  
+            "impact": float(impact_angle),  
+            "line_endpoints": {
+                "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
+                "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
+            },
+            "spatter_count": num_spatters,
+            "origin": self.position,
+            "convergence_entry_point": entry_point,  
+            "convergence_angle_3d": angle_3d  
         }
-        
+
         return impact_angle, segment_data
+
 
 
     def calculate_angle(self, mask):
@@ -354,14 +399,56 @@ class SegmentAndMap(QWidget):
                 cluster_points = points[labels == max_cluster_label]
 
                 avg_x, avg_y = np.mean(cluster_points, axis=0)
+                self.convergence_area_center = [int(avg_x), int(avg_y)]
+                self.convergence_area_radius = 30  
 
-                radius = 30  
-                circle = QGraphicsEllipseItem(avg_x - radius, avg_y - radius, radius * 2, radius * 2)
-                circle.setPen(QPen(Qt.blue, 3))  
-                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))  
+                circle = QGraphicsEllipseItem(avg_x - self.convergence_area_radius, avg_y - self.convergence_area_radius,
+                                            self.convergence_area_radius * 2, self.convergence_area_radius * 2)
+                circle.setPen(QPen(Qt.blue, 3))
+                circle.setBrush(QBrush(QColor(0, 0, 255, 80)))
                 circle.setZValue(3)
                 self.scene.addItem(circle)
-            
+                
+    def find_line_circle_intersection(self, line_endpoints, circle_center, radius):
+        (x1, y1), (x2, y2) = line_endpoints
+        cx, cy = circle_center
+
+        print(f"[DEBUG] Checking Line ({x1}, {y1}) → ({x2}, {y2}) against Circle (Center={cx}, {cy}, Radius={radius})")
+
+        # Convert to vector form
+        dx = x2 - x1
+        dy = y2 - y1
+        fx = x1 - cx
+        fy = y1 - cy
+
+        a = dx * dx + dy * dy
+        b = 2 * (fx * dx + fy * dy)
+        c = (fx * fx + fy * fy) - radius * radius
+
+        discriminant = b * b - 4 * a * c
+
+        if discriminant < 0:
+            print("[WARNING] No intersection found!")
+            return None  
+
+        discriminant = math.sqrt(discriminant)
+
+        t1 = (-b - discriminant) / (2 * a)
+        t2 = (-b + discriminant) / (2 * a)
+
+        intersections = []
+        for t in [t1, t2]:
+            if 0 <= t <= 1:
+                inter_x = x1 + t * dx
+                inter_y = y1 + t * dy
+                intersections.append((inter_x, inter_y))
+
+        if intersections:
+            print(f"[DEBUG] Intersection found at {intersections[0]}")
+            return intersections[0]  
+        print("[WARNING] No valid intersection found in range!")
+        return None
+
     def calculate_intersections(self):
         intersections = []
         lines = [line for pair in self.convergence_lines for line in pair]
