@@ -1,5 +1,5 @@
 
-<img src="https://github.com/HansongProgramming/CapstoneAiCoreDesktop/blob/main/images/SplashScreen.png">
+<img src="https://github.com/HansongProgramming/CapstoneAiCoreDesktop/blob/main/images/AiCore-Cre8TiveSync.png">
 
 Flores Hans Harold L.
 Reburiano Augnina Krizel P.
