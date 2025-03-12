@@ -773,7 +773,7 @@ class MainWindow(QMainWindow):
         impact = segment["impact"]
         convergence = np.array(segment["convergence_angle_3d"])  
         start_point_2d = np.array(segment["center"])
-        length = self.default_size[0]
+        length = self.default_size[0] if self.default_size[0] > self.default_size[1] else self.default_size[1]
         orientation = segment.get("origin", self.texture_select.currentText().lower())
 
         image_width = self.default_size[0]
