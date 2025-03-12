@@ -503,13 +503,8 @@ class MainWindow(QMainWindow):
         if not image_path:
             return
 
-        scale_factor = 0.2
         try:
             with Image.open(image_path) as img:
-                old_width, old_height = img.size
-                new_width = int(old_width * scale_factor)
-                new_height = int(old_height * scale_factor)
-                img_resized = img.resize((new_width, new_height))
 
                 assets_dir = os.path.join(self.active_folder, "assets")
                 os.makedirs(assets_dir, exist_ok=True)
@@ -518,11 +513,11 @@ class MainWindow(QMainWindow):
                 new_filename = f"{position}{ext}"
                 new_image_path = os.path.join(assets_dir, new_filename)
 
-                img_resized.save(new_image_path)
+                img.save(new_image_path)
 
-                self.default_size = (new_width, new_height)
+                self.default_size = img.size
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to downscale image: {e}")
+            QMessageBox.warning(self, "Error", f"Failed to save image: {e}")
             return
 
         try:
