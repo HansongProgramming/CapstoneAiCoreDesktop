@@ -319,6 +319,7 @@ class SegmentAndMap(QWidget):
             dy = entry_point[1] - center_y
             raw_angle = math.degrees(math.atan2(dy, dx))  
             angle_3d = -raw_angle  
+            print(f"[DEBUG] dx: {dx}, dy: {dy}, atan2(dy, dx): {raw_angle}")
         else:
             angle_3d = None  
 
@@ -337,8 +338,6 @@ class SegmentAndMap(QWidget):
         }
 
         return impact_angle, segment_data
-
-
 
     def calculate_angle(self, mask):
         y, x = np.where(mask > 0)
@@ -408,7 +407,6 @@ class SegmentAndMap(QWidget):
 
         print(f"[DEBUG] Checking Line ({x1}, {y1}) → ({x2}, {y2}) against Circle (Center={cx}, {cy}, Radius={radius})")
 
-        # Convert to vector form
         dx = x2 - x1
         dy = y2 - y1
         fx = x1 - cx
@@ -423,13 +421,12 @@ class SegmentAndMap(QWidget):
         if discriminant < 0:
             print("[WARNING] No intersection found!")
 
-            # 🔹 Instead of returning None, pick the closest endpoint
             dist1 = math.sqrt((x1 - cx) ** 2 + (y1 - cy) ** 2)
             dist2 = math.sqrt((x2 - cx) ** 2 + (y2 - cy) ** 2)
             
             closest_point = (x1, y1) if dist1 < dist2 else (x2, y2)
             print(f"[INFO] No intersection, using closest point: {closest_point}")
-            return closest_point  # Return the closest valid point
+            return closest_point 
 
         discriminant = math.sqrt(discriminant)
 
@@ -438,7 +435,7 @@ class SegmentAndMap(QWidget):
 
         intersections = []
         for t in [t1, t2]:
-            if 0 <= t <= 1:  # Only take intersections that are on the line segment
+            if 0 <= t <= 1:  
                 inter_x = x1 + t * dx
                 inter_y = y1 + t * dy
                 intersections.append((inter_x, inter_y))
@@ -447,14 +444,12 @@ class SegmentAndMap(QWidget):
             print(f"[DEBUG] Intersection found at {intersections[0]}")
             return intersections[0]  
 
-        # 🔹 If no valid intersection is found, use the closest endpoint
         dist1 = math.sqrt((x1 - cx) ** 2 + (y1 - cy) ** 2)
         dist2 = math.sqrt((x2 - cx) ** 2 + (y2 - cy) ** 2)
         
         closest_point = (x1, y1) if dist1 < dist2 else (x2, y2)
         print(f"[INFO] No valid intersection, using closest point: {closest_point}")
         return closest_point
-
 
     def calculate_intersections(self):
         intersections = []
