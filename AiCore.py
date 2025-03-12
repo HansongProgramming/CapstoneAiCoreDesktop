@@ -817,10 +817,10 @@ class MainWindow(QMainWindow):
         
         elif orientation == "back":
             start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-            rotation_z = R.from_euler('z', (90 - convergence), degrees=True) if convergence > 0 else R.from_euler('z', (90 + convergence), degrees=True)
+            rotation_z = R.from_euler('y', convergence, degrees=True) 
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', -impact, degrees=True) if convergence > 0 else R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('x', impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
             
 
