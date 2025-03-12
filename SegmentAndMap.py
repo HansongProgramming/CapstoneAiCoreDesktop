@@ -180,66 +180,6 @@ class SegmentAndMap(QWidget):
             self.start_point = None
             self.end_point = None
 
-    def analyze_selections(self):
-        if self.analyzing or not self.selection_boxes:
-            return
-
-        self.analyzing = True
-        self.analyze_button.setEnabled(False)
-
-        self.progress = QProgressDialog("Analyzing selections...", None, 0, 100, self)
-        self.progress.setWindowModality(Qt.WindowModal)
-        self.progress.setMinimumDuration(0)
-        self.progress.setValue(0)
-
-        results = []
-
-        self.predictor.set_image(self.image_np)
-
-        for i, box in enumerate(self.selection_boxes):
-            input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
-            input_box = torch.tensor(input_box, device=self.device)
-
-            masks, _, _ = self.predictor.predict(
-                box=input_box[None, :].cpu().numpy(),
-                multimask_output=False
-            )
-
-            if masks is not None and len(masks) > 0:
-                self.display_mask(masks[0]) 
-                self.process_spatter(masks[0]) 
-
-        self.draw_convergence_area()
-
-        if not hasattr(self, "convergence_area_center") or not hasattr(self, "convergence_area_radius"):
-            print("[ERROR] Convergence Area is NOT defined after drawing!")
-            self.analyzing = False
-            self.analyze_button.setEnabled(True)
-            return  
-
-        for i, box in enumerate(self.selection_boxes):
-            input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
-            input_box = torch.tensor(input_box, device=self.device)
-
-            masks, _, _ = self.predictor.predict(
-                box=input_box[None, :].cpu().numpy(),
-                multimask_output=False
-            )
-
-            if masks is not None and len(masks) > 0:
-                impact_angle, segment_data = self.process_spatter(masks[0])  
-                results.append(segment_data)
-
-        for segment_data in results:
-            self.update_json(segment_data)
-            json_data = json.dumps(segment_data)
-            self.dataUpdated.emit(json_data)
-
-        self.analyzing = False
-        self.clear_selections()
-        self.progress.close()
-        self.analyze_button.setEnabled(True)
-
     def queue_mask_display(self, mask, index):
         self.mask_display_queue.append((mask, index))
         QTimer.singleShot(0, self.process_mask_queue)
@@ -253,7 +193,6 @@ class SegmentAndMap(QWidget):
         self.progress.setValue(value)
 
     def on_analysis_complete(self, results):
-        """Handles results after analysis finishes."""
         for segment_data in results:
             self.update_json(segment_data)
             json_data = json.dumps(segment_data)
@@ -290,6 +229,8 @@ class SegmentAndMap(QWidget):
         self.scene.addItem(mask_item)
 
         return mask_item
+
+# ! CALCULATIONS AND SPATTER PROCESSING
 
     def process_spatter(self, mask):
         y, x = np.where(mask > 0)
@@ -532,3 +473,62 @@ class SegmentAndMap(QWidget):
 
         with open(self.json_file, "w") as file:
             json.dump(data, file, indent=4)
+
+    def analyze_selections(self):
+        if self.analyzing or not self.selection_boxes:
+            return
+
+        self.analyzing = True
+        self.analyze_button.setEnabled(False)
+
+        self.progress = QProgressDialog("Analyzing selections...", None, 0, 100, self)
+        self.progress.setWindowModality(Qt.WindowModal)
+        self.progress.setMinimumDuration(0)
+        self.progress.setValue(0)
+
+        results = []
+
+        self.predictor.set_image(self.image_np)
+
+        for i, box in enumerate(self.selection_boxes):
+            input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
+            input_box = torch.tensor(input_box, device=self.device)
+
+            masks, _, _ = self.predictor.predict(
+                box=input_box[None, :].cpu().numpy(),
+                multimask_output=False
+            )
+
+            if masks is not None and len(masks) > 0:
+                self.display_mask(masks[0]) 
+                self.process_spatter(masks[0]) 
+
+        self.draw_convergence_area()
+
+        if not hasattr(self, "convergence_area_center") or not hasattr(self, "convergence_area_radius"):
+            self.analyzing = False
+            self.analyze_button.setEnabled(True)
+            return  
+
+        for i, box in enumerate(self.selection_boxes):
+            input_box = np.array([box['x1'], box['y1'], box['x2'], box['y2']])
+            input_box = torch.tensor(input_box, device=self.device)
+
+            masks, _, _ = self.predictor.predict(
+                box=input_box[None, :].cpu().numpy(),
+                multimask_output=False
+            )
+
+            if masks is not None and len(masks) > 0:
+                impact_angle, segment_data = self.process_spatter(masks[0])  
+                results.append(segment_data)
+
+        for segment_data in results:
+            self.update_json(segment_data)
+            json_data = json.dumps(segment_data)
+            self.dataUpdated.emit(json_data)
+
+        self.analyzing = False
+        self.clear_selections()
+        self.progress.close()
+        self.analyze_button.setEnabled(True)

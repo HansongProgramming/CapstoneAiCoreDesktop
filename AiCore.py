@@ -536,7 +536,6 @@ class MainWindow(QMainWindow):
             return
 
         if texture:
-            # Clear all existing point labels before adding new plane
             actors_to_remove = []
             for actor in self.plotter3D.renderer.GetActors():
                 if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
@@ -546,13 +545,13 @@ class MainWindow(QMainWindow):
             for actor in actors_to_remove:
                 self.plotter3D.renderer.RemoveActor(actor)
 
-            # Reset end points list when changing planes
             self.end_points = []
             self.average_end_point = np.array([0.0, 0.0, 0.0])
 
             self.textures[position] = texture
             self.image_paths[position] = new_image_path
-            self.create_plane(position, new_width, new_height, texture)
+            width, height = self.default_size  
+            self.create_plane(position, width, height, texture) 
         else:
             width, height = self.default_size
             self.create_plane(position, width, height, None)
@@ -791,11 +790,11 @@ class MainWindow(QMainWindow):
             
         elif orientation == "right":
             start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
-            end_offset = np.array([length, 0, 0])  
-            rotation_z = R.from_euler('z', -(90 + convergence), degrees=True) if convergence > 0 else  R.from_euler('z', (90 - convergence), degrees=True)
+            end_offset = np.array([0, 0, -length])  
+            rotation_z = R.from_euler('x', convergence, degrees=True) 
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', impact, degrees=True)  if convergence < 0 else R.from_euler('x', -impact, degrees=True)
+            rotation_x = R.from_euler('z', impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)    
                 
         elif orientation == "left":
