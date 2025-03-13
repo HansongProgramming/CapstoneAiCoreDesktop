@@ -28,11 +28,11 @@ class TitleBar(QWidget):
             }
         """)
         self.edit_btn = EditButton(parent)
-        self.minimizeIcon = QPixmap(self.get_resource_path("images/minimize.png"))
+        self.minimizeIcon = QPixmap(self.get_resource_path("images/dark/minimize.png"))
         self.scaled_pixmap = self.minimizeIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
-        self.maximizeIcon = QPixmap(self.get_resource_path("images/maximize.png"))
+        self.maximizeIcon = QPixmap(self.get_resource_path("images/dark/maximize.png"))
         self.scaled_pixmap = self.maximizeIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
-        self.exitIcon = QPixmap(self.get_resource_path("images/exit.png"))
+        self.exitIcon = QPixmap(self.get_resource_path("images/dark/exit.png"))
         self.scaled_pixmap = self.exitIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.minimize_btn = QPushButton()
         self.maximize_btn = QPushButton()
@@ -42,7 +42,7 @@ class TitleBar(QWidget):
         self.close_btn.setIcon(QIcon(self.exitIcon))
         self.placer = QLabel("AiCore x SpatterSense")
         
-        self.sidebarIcon = QPixmap(self.get_resource_path("images/sidebar.png"))
+        self.sidebarIcon = QPixmap(self.get_resource_path("images/dark/sidebar.png"))
         self.scaled_pixmap = self.sidebarIcon.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         self.toggle_sidebar_btn = QPushButton("")
         self.toggle_sidebar_btn.setObjectName("sidebarButton")

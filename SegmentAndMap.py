@@ -11,7 +11,6 @@ class SegmentAndMap(QWidget):
         self.model_path = os.path.abspath(self.get_resource_path('models/sam_vit_b_01ec64.pth'))
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"Using device: {self.device}")
         
         self.sam_model = sam_model_registry['vit_b'](checkpoint=self.model_path)
         self.sam_model.to(device=self.device)
@@ -33,7 +32,6 @@ class SegmentAndMap(QWidget):
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
-        print(f"Running on: {self.device}")
         button_layout = QHBoxLayout()
         
         self.analyze_button = QPushButton("Analyze Selections", self)
@@ -243,12 +241,6 @@ class SegmentAndMap(QWidget):
         impact_angle = self.calculate_impact_angle(mask)
 
         num_spatters = len(self.segmented_masks)
-        
-        if hasattr(self, "convergence_area_center") and hasattr(self, "convergence_area_radius"):
-            print(f"[DEBUG] Using Convergence Area: Center={self.convergence_area_center}, Radius={self.convergence_area_radius}")
-        else:
-            print("[ERROR] Convergence Area is NOT defined!")
-
 
         if hasattr(self, "convergence_area_center") and hasattr(self, "convergence_area_radius"):
             entry_point = self.find_line_circle_intersection(line_endpoints, self.convergence_area_center, self.convergence_area_radius)
@@ -260,7 +252,6 @@ class SegmentAndMap(QWidget):
             dy = entry_point[1] - center_y
             raw_angle = math.degrees(math.atan2(dy, dx))  
             angle_3d = -raw_angle  
-            print(f"[DEBUG] dx: {dx}, dy: {dy}, atan2(dy, dx): {raw_angle}")
         else:
             angle_3d = None  
 
@@ -346,8 +337,6 @@ class SegmentAndMap(QWidget):
         (x1, y1), (x2, y2) = line_endpoints
         cx, cy = circle_center
 
-        print(f"[DEBUG] Checking Line ({x1}, {y1}) → ({x2}, {y2}) against Circle (Center={cx}, {cy}, Radius={radius})")
-
         dx = x2 - x1
         dy = y2 - y1
         fx = x1 - cx
@@ -360,13 +349,11 @@ class SegmentAndMap(QWidget):
         discriminant = b * b - 4 * a * c
 
         if discriminant < 0:
-            print("[WARNING] No intersection found!")
 
             dist1 = math.sqrt((x1 - cx) ** 2 + (y1 - cy) ** 2)
             dist2 = math.sqrt((x2 - cx) ** 2 + (y2 - cy) ** 2)
             
             closest_point = (x1, y1) if dist1 < dist2 else (x2, y2)
-            print(f"[INFO] No intersection, using closest point: {closest_point}")
             return closest_point 
 
         discriminant = math.sqrt(discriminant)
@@ -382,14 +369,12 @@ class SegmentAndMap(QWidget):
                 intersections.append((inter_x, inter_y))
 
         if intersections:
-            print(f"[DEBUG] Intersection found at {intersections[0]}")
             return intersections[0]  
 
         dist1 = math.sqrt((x1 - cx) ** 2 + (y1 - cy) ** 2)
         dist2 = math.sqrt((x2 - cx) ** 2 + (y2 - cy) ** 2)
         
         closest_point = (x1, y1) if dist1 < dist2 else (x2, y2)
-        print(f"[INFO] No valid intersection, using closest point: {closest_point}")
         return closest_point
 
     def calculate_intersections(self):

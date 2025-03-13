@@ -240,12 +240,25 @@ class MainWindow(QMainWindow):
 
         self.enableUI(self.canEnable)
         self.resizeEvent(None)
+        
+        self.settings_file = "settings.json"
+        self.is_dark_theme = self.load_theme_setting()
+        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/dark.css" if self.is_dark_theme else "style/light.css")))
 
-        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/dark.css")))
         if getattr(sys, 'frozen', False):
             pyi_splash.close()
         self.plotter3D.set_background("#3f3f3f")
         self.configure_plotter()
+        
+    def load_theme_setting(self):
+        if os.path.exists(self.settings_file):
+            try:
+                with open(self.settings_file, "r") as f:
+                    data = json.load(f)
+                    return data.get("dark_mode", True)
+            except json.JSONDecodeError:
+                return True
+        return True
         
     def update_object_list_position(self):
         viewer_width = self.plotter3D.width()
@@ -578,11 +591,8 @@ class MainWindow(QMainWindow):
             self.selected_plane.setText(f"Selected Plane: {self.mesh_map[actor]}")
             keyboard.press_and_release('p')
             index = self.texture_select.findText(self.mesh_map[actor])
-            print(self.mesh_map[actor])
-            print(index)
             if index != -1:
                 self.texture_select.setCurrentIndex(index)
-                print(index)
 
 # * LINE and Report Functions
     def generate_3d_line(self, segment, color="red"):          
@@ -899,14 +909,12 @@ class MainWindow(QMainWindow):
             return
 
         self.path = os.path.join(self.active_folder, "Data.json")
-        print(f"[DEBUG] Loading JSON from: {self.path}")  # Debugging log
         
         try:
             with open(self.path, 'r') as file:
                 self.segments = json.load(file)
                 self.update_object_list()
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"[DEBUG] Error loading JSON: {e}")  # Debugging log
             QMessageBox.warning(self, "Error", "Failure in loading data")
             self.segments = []
 

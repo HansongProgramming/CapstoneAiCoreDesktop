@@ -39,4 +39,4 @@ class AnalysisThread(QThread):
             self.analysis_done.emit(results)
 
         except Exception as e:
-            print(f"Error in analysis thread: {e}")
+            QMessageBox.warning(self, "Error",f"Error in analysis thread: {e}")
