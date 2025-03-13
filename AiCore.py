@@ -241,7 +241,7 @@ class MainWindow(QMainWindow):
         self.enableUI(self.canEnable)
         self.resizeEvent(None)
 
-        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
+        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/dark.css")))
         if getattr(sys, 'frozen', False):
             pyi_splash.close()
         self.plotter3D.set_background("#3f3f3f")
