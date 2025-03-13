@@ -480,6 +480,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
 
     def create_plane(self, position, width, height, texture):
+        self.configure_plotter()
         plane_center = {
             "floor": (0, 0, 0),
             "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),

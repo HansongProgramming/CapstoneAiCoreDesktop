@@ -1,143 +1,56 @@
-import sys
-import numpy as np
-import pyvista as pv
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QLineEdit
-from PyQt5.QtCore import Qt
-from pyvistaqt import QtInteractor  # Import PyVista's Qt-compatible interactor
-from scipy.spatial.transform import Rotation as R  # Import rotation library
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QMainWindow
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import QTimer, Qt
 
+class TutorialOverlay(QLabel):
+    def __init__(self, text, target_widget, parent=None):
+        super().__init__(parent)
+        self.target = target_widget
 
-class PyVistaApp(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("PyVista Example")
-        self.resize(800, 600)
+        # Arrow image
+        self.arrow = QLabel(parent)
+        arrow_pixmap = QPixmap("arrow.png")  # Replace with your arrow image
+        self.arrow.setPixmap(arrow_pixmap)
+        self.arrow.setScaledContents(True)
+        self.arrow.resize(50, 50)
 
-        # Main layout
-        main_layout = QHBoxLayout(self)
+        # Tutorial text
+        self.setText(text)
+        self.setStyleSheet("background: yellow; padding: 5px; border: 1px solid black;")
+        self.adjustSize()
 
-        # PyVista Plotter
-        self.plotter = QtInteractor(self)  # ✅ Use QtInteractor instead of regular Plotter
-        main_layout.addWidget(self.plotter, 2)
-
-        # Sidebar
-        self.sidebar = QWidget()
-        sidebar_layout = QVBoxLayout(self.sidebar)
-        main_layout.addWidget(self.sidebar, 1)
-
-        # Coordinate display
-        self.coord_labels = QLabel("X: 0 | Y: 0 | Z: 0")
-        sidebar_layout.addWidget(self.coord_labels)
-
-        # Position Inputs
-        self.x_input = QLineEdit("0")
-        self.y_input = QLineEdit("0")
-        self.z_input = QLineEdit("0")
-        sidebar_layout.addWidget(QLabel("X Position:"))
-        sidebar_layout.addWidget(self.x_input)
-        sidebar_layout.addWidget(QLabel("Y Position:"))
-        sidebar_layout.addWidget(self.y_input)
-        sidebar_layout.addWidget(QLabel("Z Position:"))
-        sidebar_layout.addWidget(self.z_input)
-
-        self.x_input.editingFinished.connect(self.update_position)
-        self.y_input.editingFinished.connect(self.update_position)
-        self.z_input.editingFinished.connect(self.update_position)
-
-        # Rotation Labels
-        self.rotation_labels = {
-            "X": QLabel("Rotate X: 0°"),
-            "Y": QLabel("Rotate Y: 0°"),
-            "Z": QLabel("Rotate Z: 0°")
-        }
-
-        # Rotation Sliders
-        self.x_slider = self.add_slider("Rotate X", sidebar_layout, self.rotate_x, "X")
-        self.y_slider = self.add_slider("Rotate Y", sidebar_layout, self.rotate_y, "Y")
-        self.z_slider = self.add_slider("Rotate Z", sidebar_layout, self.rotate_z, "Z")
-
-        # Create 3D scene
-        self.create_wall()
-        self.create_cylinder()
-
-        self.plotter.show()
-
-    def create_wall(self):
-        """Creates a plane with an image texture."""
-        texture = pv.read_texture("D:\\Academics\\CIT7\\imgValid\\IMG_0914.png")
-        self.wall = pv.Plane(center=(0, 0, 0), direction=(0, 0, 1), i_size=5, j_size=5)
-        self.plotter.add_mesh(self.wall, texture=texture)
-
-    def create_cylinder(self):
-        """Creates a white cylinder representing the trajectory line."""
-        self.cylinder_position = np.array([0, 0, 0])
-        self.cylinder_rotation = np.array([0, 0, 0])
-        
-        start = self.cylinder_position
-        end = start + np.array([0, 1.5, 0])  # Adjust for end anchoring
-        self.cylinder = pv.Line(start, end)
-        self.cylinder_actor = self.plotter.add_mesh(self.cylinder, color='white', line_width=5)
-
-    def add_slider(self, label, layout, callback, axis):
-        """Adds a slider with a corresponding label for displaying rotation degrees."""
-        layout.addWidget(self.rotation_labels[axis])  # Display initial rotation
-        slider = QSlider(Qt.Horizontal)
-        slider.setMinimum(0)
-        slider.setMaximum(360)
-        slider.valueChanged.connect(lambda value: self.update_rotation(value, axis, callback))
-        layout.addWidget(slider)
-        return slider
-
-    def update_rotation(self, value, axis, callback):
-        """Updates the rotation label and applies the rotation callback."""
-        self.rotation_labels[axis].setText(f"Rotate {axis}: {value}°")
-        callback(value)  # Apply rotation
+        self.update_position()
 
     def update_position(self):
-        x = float(self.x_input.text())
-        y = float(self.y_input.text())
-        z = float(self.z_input.text())
-        
-        self.cylinder_position = np.array([x, y, z])
-        self.refresh_cylinder()
-        self.coord_labels.setText(f"X: {x} | Y: {y} | Z: {z}")
+        """Update position near the target widget."""
+        if self.target:
+            pos = self.target.mapToParent(self.target.rect().bottomLeft())
+            self.move(pos.x(), pos.y() + 10)
 
-    def rotate_x(self, value):
-        self.cylinder_rotation[0] = value
-        self.refresh_cylinder()
+            arrow_pos = self.target.mapToParent(self.target.rect().topRight())
+            self.arrow.move(arrow_pos.x() + 10, arrow_pos.y() - 30)
 
-    def rotate_y(self, value):
-        self.cylinder_rotation[1] = value
-        self.refresh_cylinder()
+class MainApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("PyQt Tutorial Demo")
+        self.setGeometry(100, 100, 400, 300)
 
-    def rotate_z(self, value):
-        self.cylinder_rotation[2] = value
-        self.refresh_cylinder()
+        # Example button
+        self.button = QPushButton("Click Me", self)
+        self.button.setGeometry(150, 150, 100, 40)
 
-    def refresh_cylinder(self):
-        """Recalculates the cylinder position and applies rotation."""
-        start = self.cylinder_position
-        end = np.array([0, 1.5, 0])  # Default end position
+        # Show tutorial overlay
+        self.tutorial = TutorialOverlay("Click this button!", self.button, self)
 
-        # Create a rotation matrix from the stored rotation values
-        rotation = R.from_euler('xyz', self.cylinder_rotation, degrees=True)
-        
-        # Apply the rotation to the end position (keeping start fixed)
-        rotated_end = rotation.apply(end) + start  
+        # Remove tutorial after clicking
+        self.button.clicked.connect(self.hide_tutorial)
 
-        # Remove the old line
-        self.plotter.remove_actor(self.cylinder_actor)
+    def hide_tutorial(self):
+        self.tutorial.hide()
+        self.tutorial.arrow.hide()
 
-        # Create a new updated line with rotation
-        self.cylinder = pv.Line(start, rotated_end)
-        self.cylinder_actor = self.plotter.add_mesh(self.cylinder, color='white', line_width=5)
-
-        # Refresh the scene
-        self.plotter.render()
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = PyVistaApp()
-    window.show()
-    sys.exit(app.exec_())
+app = QApplication([])
+window = MainApp()
+window.show()
+app.exec_()
