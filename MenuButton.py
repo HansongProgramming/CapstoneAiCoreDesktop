@@ -66,13 +66,12 @@ class MenuButton(QPushButton):
             if folder_path:
                 canEnable = True
                 self.main_window.active_folder = folder_path
-                self.main_window.load_objects_from_json()  
-                canEnable = True
+                self.main_window.load_objects_from_json()
                 self.main_window.enableUI(canEnable)
 
-                self.main_window.plotter3D.clear()  
-                self.main_window.plotter3D.renderer.RemoveAllViewProps()  
-                self.main_window.plotter3D.update()  
+                self.main_window.plotter3D.clear()
+                self.main_window.plotter3D.renderer.RemoveAllViewProps()
+                self.main_window.plotter3D.update()
 
                 self.main_window.segments.clear()
                 self.main_window.end_points.clear()
@@ -90,23 +89,24 @@ class MenuButton(QPushButton):
                         with open(assets_file, 'r') as f:
                             assets_data = json.load(f)
 
-                        for position, relative_path in assets_data.items():
-                            full_path = os.path.join(self.main_window.active_folder, relative_path)
-                            if os.path.exists(full_path):
-                                texture = pv.read_texture(full_path)
-                                img = QImage(full_path)
-                                width = img.width()
-                                height = img.height()
+                        for position, paths in assets_data.items():
+                            if isinstance(paths, dict) and "scaled" in paths:
+                                scaled_image_path = os.path.join(self.main_window.active_folder, paths["scaled"])
+                                if os.path.exists(scaled_image_path):
+                                    texture = pv.read_texture(scaled_image_path)
+                                    img = QImage(scaled_image_path)
+                                    width, height = img.width(), img.height()
 
-                                self.main_window.default_size = (width, height)
-                                self.main_window.textures[position] = texture
-                                self.main_window.image_paths[position] = full_path
+                                    self.main_window.default_size = (width, height)
+                                    self.main_window.textures[position] = texture
+                                    self.main_window.image_paths[position] = scaled_image_path
 
-                                self.main_window.add_plane_with_image(position)
+                                    self.main_window.add_plane_with_image(position)
                     except Exception as e:
                         QMessageBox.warning(self, "Error", f"Failed to load assets: {e}")
 
                 self.main_window.load_objects_from_json()
+
 
         elif action.text() == "Generate Report": 
             self.main_window.open_generate_report_dialog()

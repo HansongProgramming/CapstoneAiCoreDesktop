@@ -776,8 +776,8 @@ class MainWindow(QMainWindow):
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
-        Ax = (start_point_2d[0] - image_width / 2 ) * 0.2
-        Ay = -(start_point_2d[1] - image_height / 2) * 0.2
+        Ax = (start_point_2d[0] * 0.2) - image_width / 2  
+        Ay = -((start_point_2d[1] * 0.2) - image_height / 2)
         start_point = np.array([Ax, Ay, 0])  
         end_offset = np.array([length, 0, 0])  
         
