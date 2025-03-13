@@ -5,6 +5,8 @@ if getattr(sys, 'frozen', False):
 
 class MainWindow(QMainWindow):
     dataUpdated = pyqtSignal(str)
+   
+# * UI and Main functions
     def __init__(self):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
@@ -256,39 +258,28 @@ class MainWindow(QMainWindow):
         new_x = viewer_width - list_width - margin
         new_y = margin
         self.object_list.setGeometry(new_x, new_y, list_width, list_height)
-
+        
     def eventFilter(self, obj, event):
         if obj == self.plotter3D and event.type() == QEvent.Resize:
             self.update_object_list_position()
         return super().eventFilter(obj, event)
     
-    def on_pick(self, obj, event):
-        click_pos = self.plotter3D.iren.get_event_position()
-        self.picker.Pick(click_pos[0], click_pos[1], 0, self.plotter3D.renderer)
-        
-        actor = self.picker.GetActor()
-        if actor and actor in self.mesh_map:
-            self.selected_plane.setText(f"Selected Plane: {self.mesh_map[actor]}")
-            keyboard.press_and_release('p')
-            index = self.texture_select.findText(self.mesh_map[actor])
-            print(self.mesh_map[actor])
-            print(index)
-            if index != -1:
-                self.texture_select.setCurrentIndex(index)
-                print(index)
-
-    def export_plotter(self):
-        opt = QFileDialog.Options()
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Screenshot",
-            "",
-            "PNG Files (*.png);;All Files (*)",
-            options=opt
-        )
-        
-        if file_path: 
-            self.plotter3D.screenshot(file_path)
+    def enableUI(self, enabled):
+        self.add_floor_btn.setEnabled(enabled)
+        self.add_right_wall_btn.setEnabled(enabled)
+        self.add_left_wall_btn.setEnabled(enabled)
+        self.add_back_wall_btn.setEnabled(enabled)
+        self.add_front_wall_btn.setEnabled(enabled)
+        self.add_points_btn.setEnabled(enabled)
+        self.delete_button.setEnabled(enabled)
+        self.object_list.setEnabled(enabled)
+        self.del_floor_btn.setEnabled(enabled)
+        self.del_right_wall_btn.setEnabled(enabled)
+        self.del_left_wall_btn.setEnabled(enabled)
+        self.del_back_wall_btn.setEnabled(enabled)
+        self.del_front_wall_btn.setEnabled(enabled)
+        self.texture_select.setEnabled(enabled)
+        self.add_head_btn.setEnabled(enabled)
 
     def configure_plotter(self):
 
@@ -313,150 +304,23 @@ class MainWindow(QMainWindow):
         self.plotter3D.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane", lighting=False)
         self.plotter3D.add_axes()
         self.plotter3D.show()
-
-    def enableUI(self, enabled):
-        self.add_floor_btn.setEnabled(enabled)
-        self.add_right_wall_btn.setEnabled(enabled)
-        self.add_left_wall_btn.setEnabled(enabled)
-        self.add_back_wall_btn.setEnabled(enabled)
-        self.add_front_wall_btn.setEnabled(enabled)
-        self.add_points_btn.setEnabled(enabled)
-        self.delete_button.setEnabled(enabled)
-        self.object_list.setEnabled(enabled)
-        self.del_floor_btn.setEnabled(enabled)
-        self.del_right_wall_btn.setEnabled(enabled)
-        self.del_left_wall_btn.setEnabled(enabled)
-        self.del_back_wall_btn.setEnabled(enabled)
-        self.del_front_wall_btn.setEnabled(enabled)
-        self.texture_select.setEnabled(enabled)
-        self.add_head_btn.setEnabled(enabled)
-
-    def load_objects_from_json(self):
-        if not self.active_folder:
-            QMessageBox.warning(self, "Error", "No active folder selected.")
-            return
-
-        self.path = os.path.join(self.active_folder, "Data.json")
-        print(f"[DEBUG] Loading JSON from: {self.path}")  # Debugging log
         
-        try:
-            with open(self.path, 'r') as file:
-                self.segments = json.load(file)
-                self.update_object_list()
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"[DEBUG] Error loading JSON: {e}")  # Debugging log
-            QMessageBox.warning(self, "Error", "Failure in loading data")
-            self.segments = []
-
-    def update_object_list(self):
-        self.object_list.clear()
-        for i, segment in enumerate(self.segments):
-            item = QListWidgetItem(f"Spatter {i+1}: {round(int(segment['angle']),2)}")
-            self.object_list.addItem(item)
-            
+    def load_stylesheet(self, file_path):
+        with open(file_path, 'r') as f:
+            return f.read()
+        
+    def toggle_sidebar(self):
+        if self.sidebar.isVisible():
+            self.sidebar.hide()
+        else:
+            self.sidebar.show()
+    
     def get_resource_path(self, relative_path):
         if getattr(sys, 'frozen', False): 
             base_path = sys._MEIPASS
         else:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, relative_path)
-    
-    def on_object_selected(self, item):
-        index = self.object_list.row(item)
-        selected_segment = self.segments[index]
-        
-        self.AngleReport.setText(f"Impact Angle: {round(selected_segment['angle'], 2)}°")
-
-        start = selected_segment["center"]
-        end = selected_segment["line_endpoints"]["negative_direction"]
-        dx = end[0] - start[0]
-        dy = end[1] - start[1]
-        distance = math.sqrt(dx*dx + dy*dy)
-        bz = distance * math.sin(math.radians(selected_segment["angle"]))
-        
-        angle = math.degrees(math.atan2(dy, dx))
-        if angle < 0:
-            angle += 360
-        
-        direction = "East"
-        if 22.5 <= angle < 67.5:
-            direction = "Northeast"
-        elif 67.5 <= angle < 112.5:
-            direction = "North"
-        elif 112.5 <= angle < 157.5:
-            direction = "Northwest"
-        elif 157.5 <= angle < 202.5:
-            direction = "West"
-        elif 202.5 <= angle < 247.5:
-            direction = "Southwest"
-        elif 247.5 <= angle < 292.5:
-            direction = "South"
-        elif 292.5 <= angle < 337.5:
-            direction = "Southeast"
-        
-        self.HeightReport.setText(f"Point of Origin: {round(bz, 2)} mm {direction}")
-        
-        orientation = self.texture_select.currentText().lower()
-        actors_to_remove = []
-        for actor in self.plotter3D.renderer.actors.values():
-            if isinstance(actor, vtk.vtkActor):
-                if not actor.GetTexture():
-                    actors_to_remove.append(actor)
-            
-        for actor in actors_to_remove:
-            self.plotter3D.renderer.RemoveActor(actor)
-            
-        for i, segment in enumerate(self.segments):
-            color = "green" if i == index else "red"
-            self.generate_3d_line(segment, color)
-
-    def delete_selected_object(self):
-        selected_items = self.object_list.selectedItems()
-        if not selected_items:
-            QMessageBox.warning(self, "Error", "No object selected for deletion.")
-            return
-
-        for item in selected_items:
-            index = self.object_list.row(item)
-            del self.segments[index]
-            self.update_object_list()
-
-        with open(self.json_file, 'w') as file:
-            json.dump(self.segments, file)
-
-        # Remove all 3D actors (including point labels)
-        actors_to_remove = []
-        for actor in self.plotter3D.renderer.GetActors():
-            if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
-                if not actor.GetTexture():
-                    actors_to_remove.append(actor)
-
-        for actor in actors_to_remove:
-            self.plotter3D.renderer.RemoveActor(actor)
-
-        # Remove point labels
-        if hasattr(self, 'label_actors') and self.label_actors:
-            for actor in self.label_actors:
-                self.plotter3D.remove_actor(actor)
-            self.label_actors.clear()
-
-        # Reset stored end points
-        self.end_points = []
-        self.average_end_point = np.array([0.0, 0.0, 0.0])
-
-        # Redraw remaining spatters
-        for segment in self.segments:
-            self.generate_3d_line(segment)
-
-    def load_stylesheet(self, file_path):
-        with open(file_path, 'r') as f:
-            return f.read()
-    
-    def toggle_sidebar(self):
-        if self.sidebar.isVisible():
-            self.sidebar.hide()
-        else:
-            self.sidebar.show()
     
     def load_image(self):
         options = QFileDialog.Options()
@@ -472,6 +336,152 @@ class MainWindow(QMainWindow):
                 return None, None, None, None
         return None, None, None, None
     
+    def export_plotter(self):
+        opt = QFileDialog.Options()
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Screenshot",
+            "",
+            "PNG Files (*.png);;All Files (*)",
+            options=opt
+        )
+        
+        if file_path: 
+            self.plotter3D.screenshot(file_path)
+            
+    def add_head(self):
+        model = self.get_resource_path("figure/head.stl")
+        head = pv.read(model)
+        translation_vector = self.average_end_point
+        head.translate(translation_vector,inplace=True)
+        head.scale(5.0)
+        self.plotter3D.add_mesh(head, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
+        
+    def update_object_list(self):
+        self.object_list.clear()
+        for i, segment in enumerate(self.segments):
+            item = QListWidgetItem(f"Spatter {i+1}: {round(int(segment['angle']),2)}")
+            self.object_list.addItem(item)
+        
+# * PLANES FUNCTIONS
+
+    def open_image_with_interaction(self):
+        position = self.texture_select.currentText().lower()
+        
+        assets_json_path = os.path.join(self.active_folder, "Assets.json")
+        if os.path.exists(assets_json_path):
+            try:
+                with open(assets_json_path, 'r') as f:
+                    assets_data = json.load(f)
+                    if position in assets_data:
+                        # FIX: Use the original image instead of the scaled one
+                        image_path = os.path.join(self.active_folder, assets_data[position]["original"])
+                        if os.path.exists(image_path):
+                            self.path = os.path.join(self.active_folder, "Data.json")
+                            self.json_file = str(self.path)
+                            jsonpath = self.json_file
+                            dialog = SegmentAndMap(image_path, jsonpath, position, self)
+                            dialog.dataUpdated.connect(self.update_from_interaction)
+
+                            for i in reversed(range(self.viewer_layout2D.count())): 
+                                self.viewer_layout2D.itemAt(i).widget().setParent(None)
+                            
+                            self.viewer_layout2D.addWidget(dialog)
+                            self.tabs.setCurrentIndex(1) 
+                            return
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
+        image_path = self.image_paths.get(position)
+        if image_path:
+            self.path = os.path.join(self.active_folder, "Data.json")
+            self.json_file = str(self.path)
+            jsonpath = self.json_file
+            dialog = SegmentAndMap(image_path, jsonpath, position, self)
+            dialog.dataUpdated.connect(self.update_from_interaction)
+            
+            for i in reversed(range(self.viewer_layout2D.count())): 
+                self.viewer_layout2D.itemAt(i).widget().setParent(None)
+            
+            self.viewer_layout2D.addWidget(dialog)
+            self.tabs.setCurrentIndex(1)  
+        else:
+            QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
+
+    def create_plane(self, position, width, height, texture):
+        self.configure_plotter()
+        plane_center = {
+            "floor": (0, 0, 0),
+            "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
+            "left":  (-self.default_size[0] / 2, 0, self.default_size[0]/2),
+            "back":  (0, -self.default_size[1] / 2, self.default_size[1] / 2),
+            "front": (0, self.default_size[1] / 2, self.default_size[1] / 2),
+        }
+        plane_direction = {
+            "floor": (0, 0, 1),
+            "right": (1, 0, 0),
+            "left": (1, 0, 0),
+            "back": (0, -1, 0),
+            "front": (0, 1, 0),
+        }
+        if position in plane_center and position in plane_direction:
+            i_resolution = width
+            j_resolution = height
+
+            floor_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            right_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            left_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            front_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            back_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
+            
+            if position == "back":
+                rotationAngle = -90
+                back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
+                back = self.plotter3D.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
+                self.planes.append(back_plane)
+                self.mesh_map[back] = "Back"  
+            elif position == "front":
+                rotationAngle = 90
+                front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
+                front_plane = front_plane.rotate_z(180, point=plane_center[position])
+                front = self.plotter3D.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
+                self.planes.append(front_plane)
+                self.mesh_map[front] = "Front"
+            elif position == "left":
+                left_plane.rotate_z(180)
+                left = self.plotter3D.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
+                self.planes.append(left_plane)
+                self.mesh_map[left] = "Left"
+            elif position == "right":
+                right = self.plotter3D.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
+                self.planes.append(right_plane)
+                self.mesh_map[right] = "Right"
+            elif position == "floor":
+                floor = self.plotter3D.add_mesh(floor_plane, texture=texture, name=f"{position}_plane",lighting=False)
+                self.planes.append(floor_plane)
+                self.mesh_map[floor] = "Floor"
+                
+    def delete_plane(self, plane):
+        assets_json_path = os.path.join(self.active_folder, "Assets.json")
+        if os.path.exists(assets_json_path):
+            try:
+                with open(assets_json_path, 'r') as f:
+                    assets_data = json.load(f)
+                    for position, relative_path in assets_data.items():
+                        full_path = os.path.join(self.active_folder, relative_path)
+                        if full_path == self.image_paths.get(position):
+                            del assets_data[position]
+                            os.remove(full_path)
+                            break
+                with open(assets_json_path, 'w') as f:
+                    json.dump(assets_data, f, indent=4)
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to delete plane: {e}")
+                return
+        else:
+            QMessageBox.warning(self, "Error", "Assets.json not found.")
+            return
+        self.plotter3D.remove_actor(plane)
+
     def add_plane_with_image(self, position):
         if not self.active_folder:
             QMessageBox.warning(self, "Error", "No active folder selected.")
@@ -559,210 +569,22 @@ class MainWindow(QMainWindow):
             width, height = self.default_size
             self.create_plane(position, width, height, None)
 
-    def add_head(self):
-        model = self.get_resource_path("figure/head.stl")
-        head = pv.read(model)
-        translation_vector = self.average_end_point
-        head.translate(translation_vector,inplace=True)
-        head.scale(5.0)
-        self.plotter3D.add_mesh(head, name="head",smooth_shading=False,ambient=0.2,color="white",specular=0.5,specular_power=20)
+    def on_pick(self, obj, event):
+        click_pos = self.plotter3D.iren.get_event_position()
+        self.picker.Pick(click_pos[0], click_pos[1], 0, self.plotter3D.renderer)
         
-    def create_plane(self, position, width, height, texture):
-        self.configure_plotter()
-        plane_center = {
-            "floor": (0, 0, 0),
-            "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
-            "left":  (-self.default_size[0] / 2, 0, self.default_size[0]/2),
-            "back":  (0, -self.default_size[1] / 2, self.default_size[1] / 2),
-            "front": (0, self.default_size[1] / 2, self.default_size[1] / 2),
-        }
-        plane_direction = {
-            "floor": (0, 0, 1),
-            "right": (1, 0, 0),
-            "left": (1, 0, 0),
-            "back": (0, -1, 0),
-            "front": (0, 1, 0),
-        }
-        if position in plane_center and position in plane_direction:
-            i_resolution = width
-            j_resolution = height
+        actor = self.picker.GetActor()
+        if actor and actor in self.mesh_map:
+            self.selected_plane.setText(f"Selected Plane: {self.mesh_map[actor]}")
+            keyboard.press_and_release('p')
+            index = self.texture_select.findText(self.mesh_map[actor])
+            print(self.mesh_map[actor])
+            print(index)
+            if index != -1:
+                self.texture_select.setCurrentIndex(index)
+                print(index)
 
-            floor_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-            right_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-            left_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-            front_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-            back_plane = pv.Plane(center=plane_center[position],direction=plane_direction[position],i_size=width,j_size=height,i_resolution=i_resolution,j_resolution=j_resolution,)
-            
-            if position == "back":
-                rotationAngle = -90
-                back_plane = back_plane.rotate_y(rotationAngle, point=plane_center[position])
-                back = self.plotter3D.add_mesh(back_plane, texture=texture, name=f"{position}_plane")
-                self.planes.append(back_plane)
-                self.mesh_map[back] = "Back"  
-            elif position == "front":
-                rotationAngle = 90
-                front_plane = front_plane.rotate_y(rotationAngle, point=plane_center[position])
-                front_plane = front_plane.rotate_z(180, point=plane_center[position])
-                front = self.plotter3D.add_mesh(front_plane, texture=texture, name=f"{position}_plane")
-                self.planes.append(front_plane)
-                self.mesh_map[front] = "Front"
-            elif position == "left":
-                left_plane.rotate_z(180)
-                left = self.plotter3D.add_mesh(left_plane, texture=texture, name=f"{position}_plane")
-                self.planes.append(left_plane)
-                self.mesh_map[left] = "Left"
-            elif position == "right":
-                right = self.plotter3D.add_mesh(right_plane, texture=texture, name=f"{position}_plane")
-                self.planes.append(right_plane)
-                self.mesh_map[right] = "Right"
-            elif position == "floor":
-                floor = self.plotter3D.add_mesh(floor_plane, texture=texture, name=f"{position}_plane",lighting=False)
-                self.planes.append(floor_plane)
-                self.mesh_map[floor] = "Floor"
-    
-    def delete_plane(self, plane):
-        assets_json_path = os.path.join(self.active_folder, "Assets.json")
-        if os.path.exists(assets_json_path):
-            try:
-                with open(assets_json_path, 'r') as f:
-                    assets_data = json.load(f)
-                    for position, relative_path in assets_data.items():
-                        full_path = os.path.join(self.active_folder, relative_path)
-                        if full_path == self.image_paths.get(position):
-                            del assets_data[position]
-                            os.remove(full_path)
-                            break
-                with open(assets_json_path, 'w') as f:
-                    json.dump(assets_data, f, indent=4)
-            except Exception as e:
-                QMessageBox.warning(self, "Error", f"Failed to delete plane: {e}")
-                return
-        else:
-            QMessageBox.warning(self, "Error", "Assets.json not found.")
-            return
-        self.plotter3D.remove_actor(plane)
-        
-    def open_image_with_interaction(self):
-        position = self.texture_select.currentText().lower()
-        
-        assets_json_path = os.path.join(self.active_folder, "Assets.json")
-        if os.path.exists(assets_json_path):
-            try:
-                with open(assets_json_path, 'r') as f:
-                    assets_data = json.load(f)
-                    if position in assets_data:
-                        # FIX: Use the original image instead of the scaled one
-                        image_path = os.path.join(self.active_folder, assets_data[position]["original"])
-                        if os.path.exists(image_path):
-                            self.path = os.path.join(self.active_folder, "Data.json")
-                            self.json_file = str(self.path)
-                            jsonpath = self.json_file
-                            dialog = SegmentAndMap(image_path, jsonpath, position, self)
-                            dialog.dataUpdated.connect(self.update_from_interaction)
-
-                            for i in reversed(range(self.viewer_layout2D.count())): 
-                                self.viewer_layout2D.itemAt(i).widget().setParent(None)
-                            
-                            self.viewer_layout2D.addWidget(dialog)
-                            self.tabs.setCurrentIndex(1) 
-                            return
-            except Exception as e:
-                QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
-        image_path = self.image_paths.get(position)
-        if image_path:
-            self.path = os.path.join(self.active_folder, "Data.json")
-            self.json_file = str(self.path)
-            jsonpath = self.json_file
-            dialog = SegmentAndMap(image_path, jsonpath, position, self)
-            dialog.dataUpdated.connect(self.update_from_interaction)
-            
-            for i in reversed(range(self.viewer_layout2D.count())): 
-                self.viewer_layout2D.itemAt(i).widget().setParent(None)
-            
-            self.viewer_layout2D.addWidget(dialog)
-            self.tabs.setCurrentIndex(1)  
-        else:
-            QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
-
-    def update_from_interaction(self, json_data):
-        self.load_objects_from_json()
-        
-        # Clear all actors including point labels
-        actors_to_remove = []
-        for actor in self.plotter3D.renderer.GetActors():
-            if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
-                if not actor.GetTexture():
-                    actors_to_remove.append(actor)
-        
-        for actor in actors_to_remove:
-            self.plotter3D.renderer.RemoveActor(actor)
-        
-        # Reset end points list when updating
-        self.end_points = []
-        self.average_end_point = np.array([0.0, 0.0, 0.0])
-        
-        try:
-            with open(self.json_file, 'r') as file:
-                current_data = json.load(file)
-                if current_data != self.previous_data:
-                    self.segments = current_data
-                    self.previous_data = current_data
-                    
-                    total_spatters = sum(segment["spatter_count"] for segment in self.segments)
-                    avg_angle = sum(segment["angle"] for segment in self.segments) / len(self.segments) if self.segments else 0
-                    
-                    self.stainCount.setText(f"Spatter Count: {total_spatters}")
-                    self.AngleReport.setText(f"Average Impact Angle: {round(avg_angle, 2)}°")
-                    
-                    avg_bz = 0
-                    directions = []
-                    for segment in self.segments:
-                        start = segment["center"]
-                        end = segment["line_endpoints"]["negative_direction"]
-                        dx = end[0] - start[0]
-                        dy = end[1] - start[1]
-                        distance = math.sqrt(dx*dx + dy*dy)
-                        bz = distance * math.sin(math.radians(segment["angle"]))
-                        avg_bz += bz
-                        
-                        angle = math.degrees(math.atan2(dy, dx))
-                        if angle < 0:
-                            angle += 360
-                        
-                        if 22.5 <= angle < 67.5:
-                            directions.append("Northeast")
-                        elif 67.5 <= angle < 112.5:
-                            directions.append("North")
-                        elif 112.5 <= angle < 157.5:
-                            directions.append("Northwest")
-                        elif 157.5 <= angle < 202.5:
-                            directions.append("West")
-                        elif 202.5 <= angle < 247.5:
-                            directions.append("Southwest")
-                        elif 247.5 <= angle < 292.5:
-                            directions.append("South")
-                        elif 292.5 <= angle < 337.5:
-                            directions.append("Southeast")
-                        else:
-                            directions.append("East")
-                    
-                    avg_bz = avg_bz / len(self.segments) if self.segments else 0
-                    
-                    from collections import Counter
-                    most_common_direction = Counter(directions).most_common(1)[0][0] if directions else "Unknown"
-                    
-                    self.HeightReport.setText(f"Average Point of Origin: {round(avg_bz, 2)} mm {most_common_direction}")
-                    
-                else:
-                    QMessageBox.warning(self, "Error", "No changes detected in JSON file.")
-        except FileNotFoundError:
-            QMessageBox.warning(self, "Error", f"File {self.json_file} not found.")
-        except json.JSONDecodeError:
-            QMessageBox.warning(self, "Error", "Error decoding JSON.")
-            
-        for segment in self.segments:
-            self.generate_3d_line(segment)
-
+# * LINE and Report Functions
     def generate_3d_line(self, segment, color="red"):          
         self.update_object_list()
 
@@ -854,7 +676,6 @@ class MainWindow(QMainWindow):
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
-        # Store the end points for averaging
         self.end_points.append(end_point)
         self.average_end_point = np.mean(self.end_points, axis=0)
 
@@ -906,6 +727,188 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Success", "Report saved successfully.")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to save report: {e}")
+
+# * JSON FUNCTIONS
+    def delete_selected_object(self):
+        selected_items = self.object_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Error", "No object selected for deletion.")
+            return
+
+        for item in selected_items:
+            index = self.object_list.row(item)
+            del self.segments[index]
+            self.update_object_list()
+
+        with open(self.json_file, 'w') as file:
+            json.dump(self.segments, file)
+
+        # Remove all 3D actors (including point labels)
+        actors_to_remove = []
+        for actor in self.plotter3D.renderer.GetActors():
+            if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
+                if not actor.GetTexture():
+                    actors_to_remove.append(actor)
+
+        for actor in actors_to_remove:
+            self.plotter3D.renderer.RemoveActor(actor)
+
+        # Remove point labels
+        if hasattr(self, 'label_actors') and self.label_actors:
+            for actor in self.label_actors:
+                self.plotter3D.remove_actor(actor)
+            self.label_actors.clear()
+
+        # Reset stored end points
+        self.end_points = []
+        self.average_end_point = np.array([0.0, 0.0, 0.0])
+
+        # Redraw remaining spatters
+        for segment in self.segments:
+            self.generate_3d_line(segment)
+
+    def on_object_selected(self, item):
+        index = self.object_list.row(item)
+        selected_segment = self.segments[index]
+        
+        self.AngleReport.setText(f"Impact Angle: {round(selected_segment['angle'], 2)}°")
+
+        start = selected_segment["center"]
+        end = selected_segment["line_endpoints"]["negative_direction"]
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        distance = math.sqrt(dx*dx + dy*dy)
+        bz = distance * math.sin(math.radians(selected_segment["angle"]))
+        
+        angle = math.degrees(math.atan2(dy, dx))
+        if angle < 0:
+            angle += 360
+        
+        direction = "East"
+        if 22.5 <= angle < 67.5:
+            direction = "Northeast"
+        elif 67.5 <= angle < 112.5:
+            direction = "North"
+        elif 112.5 <= angle < 157.5:
+            direction = "Northwest"
+        elif 157.5 <= angle < 202.5:
+            direction = "West"
+        elif 202.5 <= angle < 247.5:
+            direction = "Southwest"
+        elif 247.5 <= angle < 292.5:
+            direction = "South"
+        elif 292.5 <= angle < 337.5:
+            direction = "Southeast"
+        
+        self.HeightReport.setText(f"Point of Origin: {round(bz, 2)} mm {direction}")
+        
+        orientation = self.texture_select.currentText().lower()
+        actors_to_remove = []
+        for actor in self.plotter3D.renderer.actors.values():
+            if isinstance(actor, vtk.vtkActor):
+                if not actor.GetTexture():
+                    actors_to_remove.append(actor)
+            
+        for actor in actors_to_remove:
+            self.plotter3D.renderer.RemoveActor(actor)
+            
+        for i, segment in enumerate(self.segments):
+            color = "green" if i == index else "red"
+            self.generate_3d_line(segment, color)
+
+    def update_from_interaction(self, json_data):
+        self.load_objects_from_json()
+        
+        actors_to_remove = []
+        for actor in self.plotter3D.renderer.GetActors():
+            if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
+                if not actor.GetTexture():
+                    actors_to_remove.append(actor)
+        
+        for actor in actors_to_remove:
+            self.plotter3D.renderer.RemoveActor(actor)
+        
+        self.end_points = []
+        self.average_end_point = np.array([0.0, 0.0, 0.0])
+        
+        try:
+            with open(self.json_file, 'r') as file:
+                current_data = json.load(file)
+                if current_data != self.previous_data:
+                    self.segments = current_data
+                    self.previous_data = current_data
+                    
+                    total_spatters = sum(segment["spatter_count"] for segment in self.segments)
+                    avg_angle = sum(segment["angle"] for segment in self.segments) / len(self.segments) if self.segments else 0
+                    
+                    self.stainCount.setText(f"Spatter Count: {total_spatters}")
+                    self.AngleReport.setText(f"Average Impact Angle: {round(avg_angle, 2)}°")
+                    
+                    avg_bz = 0
+                    directions = []
+                    for segment in self.segments:
+                        start = segment["center"]
+                        end = segment["line_endpoints"]["negative_direction"]
+                        dx = end[0] - start[0]
+                        dy = end[1] - start[1]
+                        distance = math.sqrt(dx*dx + dy*dy)
+                        bz = distance * math.sin(math.radians(segment["angle"]))
+                        avg_bz += bz
+                        
+                        angle = math.degrees(math.atan2(dy, dx))
+                        if angle < 0:
+                            angle += 360
+                        
+                        if 22.5 <= angle < 67.5:
+                            directions.append("Northeast")
+                        elif 67.5 <= angle < 112.5:
+                            directions.append("North")
+                        elif 112.5 <= angle < 157.5:
+                            directions.append("Northwest")
+                        elif 157.5 <= angle < 202.5:
+                            directions.append("West")
+                        elif 202.5 <= angle < 247.5:
+                            directions.append("Southwest")
+                        elif 247.5 <= angle < 292.5:
+                            directions.append("South")
+                        elif 292.5 <= angle < 337.5:
+                            directions.append("Southeast")
+                        else:
+                            directions.append("East")
+                    
+                    avg_bz = avg_bz / len(self.segments) if self.segments else 0
+                    
+                    from collections import Counter
+                    most_common_direction = Counter(directions).most_common(1)[0][0] if directions else "Unknown"
+                    
+                    self.HeightReport.setText(f"Average Point of Origin: {round(avg_bz, 2)} mm {most_common_direction}")
+                    
+                else:
+                    QMessageBox.warning(self, "Error", "No changes detected in JSON file.")
+        except FileNotFoundError:
+            QMessageBox.warning(self, "Error", f"File {self.json_file} not found.")
+        except json.JSONDecodeError:
+            QMessageBox.warning(self, "Error", "Error decoding JSON.")
+            
+        for segment in self.segments:
+            self.generate_3d_line(segment)
+            
+    def load_objects_from_json(self):
+        if not self.active_folder:
+            QMessageBox.warning(self, "Error", "No active folder selected.")
+            return
+
+        self.path = os.path.join(self.active_folder, "Data.json")
+        print(f"[DEBUG] Loading JSON from: {self.path}")  # Debugging log
+        
+        try:
+            with open(self.path, 'r') as file:
+                self.segments = json.load(file)
+                self.update_object_list()
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(f"[DEBUG] Error loading JSON: {e}")  # Debugging log
+            QMessageBox.warning(self, "Error", "Failure in loading data")
+            self.segments = []
 
 if __name__ == "__main__":
     
