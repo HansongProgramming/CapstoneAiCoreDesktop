@@ -478,20 +478,23 @@ class MainWindow(QMainWindow):
             return
 
         assets_json_path = os.path.join(self.active_folder, "Assets.json")
+        assets_dir = os.path.join(self.active_folder, "assets")
+        os.makedirs(assets_dir, exist_ok=True)
+
         if os.path.exists(assets_json_path):
             try:
                 with open(assets_json_path, 'r') as f:
                     assets_data = json.load(f)
                     if position in assets_data:
-                        image_path = os.path.join(self.active_folder, assets_data[position])
-                        if os.path.exists(image_path):
+                        scaled_image_path = os.path.join(self.active_folder, assets_data[position]["scaled"])
+                        if os.path.exists(scaled_image_path):
                             try:
-                                with Image.open(image_path) as img:
+                                with Image.open(scaled_image_path) as img:
                                     width, height = img.size
-                                texture = pv.read_texture(image_path)
+                                texture = pv.read_texture(scaled_image_path)
                                 self.default_size = (width, height)
                                 self.textures[position] = texture
-                                self.image_paths[position] = image_path
+                                self.image_paths[position] = scaled_image_path
                                 self.create_plane(position, width, height, texture)
                                 return
                             except Exception as e:
@@ -502,22 +505,27 @@ class MainWindow(QMainWindow):
         width, height, texture, image_path = self.load_image()
         if not image_path:
             return
-
+        
+        scale_factor = 0.2
         try:
             with Image.open(image_path) as img:
-
-                assets_dir = os.path.join(self.active_folder, "assets")
-                os.makedirs(assets_dir, exist_ok=True)
+                old_width, old_height = img.size
+                new_width = int(old_width * scale_factor)
+                new_height = int(old_height * scale_factor)
+                img_resized = img.resize((new_width, new_height))
 
                 _, ext = os.path.splitext(image_path)
-                new_filename = f"{position}{ext}"
-                new_image_path = os.path.join(assets_dir, new_filename)
+                original_filename = f"{position}_original{ext}"
+                scaled_filename = f"{position}{ext}"
+                original_image_path = os.path.join(assets_dir, original_filename)
+                scaled_image_path = os.path.join(assets_dir, scaled_filename)
+                
+                img.save(original_image_path)  # Save original size
+                img_resized.save(scaled_image_path)  # Save scaled image
 
-                img.save(new_image_path)
-
-                self.default_size = img.size
+                self.default_size = (new_width, new_height)
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to save image: {e}")
+            QMessageBox.warning(self, "Error", f"Failed to process images: {e}")
             return
 
         try:
@@ -527,8 +535,8 @@ class MainWindow(QMainWindow):
             else:
                 assets_data = {}
 
-            assets_data[position] = os.path.join("assets", new_filename)
-
+            assets_data[position] = {"original": os.path.join("assets", original_filename), "scaled": os.path.join("assets", scaled_filename)}
+            
             with open(assets_json_path, 'w') as f:
                 json.dump(assets_data, f, indent=4)
         except Exception as e:
@@ -536,11 +544,7 @@ class MainWindow(QMainWindow):
             return
 
         if texture:
-            actors_to_remove = []
-            for actor in self.plotter3D.renderer.GetActors():
-                if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
-                    if not actor.GetTexture():
-                        actors_to_remove.append(actor)
+            actors_to_remove = [actor for actor in self.plotter3D.renderer.GetActors() if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower) and not actor.GetTexture()]
             
             for actor in actors_to_remove:
                 self.plotter3D.renderer.RemoveActor(actor)
@@ -549,9 +553,8 @@ class MainWindow(QMainWindow):
             self.average_end_point = np.array([0.0, 0.0, 0.0])
 
             self.textures[position] = texture
-            self.image_paths[position] = new_image_path
-            width, height = self.default_size  
-            self.create_plane(position, width, height, texture) 
+            self.image_paths[position] = scaled_image_path
+            self.create_plane(position, new_width, new_height, texture)
         else:
             width, height = self.default_size
             self.create_plane(position, width, height, None)
@@ -648,14 +651,15 @@ class MainWindow(QMainWindow):
                 with open(assets_json_path, 'r') as f:
                     assets_data = json.load(f)
                     if position in assets_data:
-                        image_path = os.path.join(self.active_folder, assets_data[position])
+                        # FIX: Use the original image instead of the scaled one
+                        image_path = os.path.join(self.active_folder, assets_data[position]["original"])
                         if os.path.exists(image_path):
                             self.path = os.path.join(self.active_folder, "Data.json")
                             self.json_file = str(self.path)
                             jsonpath = self.json_file
                             dialog = SegmentAndMap(image_path, jsonpath, position, self)
                             dialog.dataUpdated.connect(self.update_from_interaction)
-                            
+
                             for i in reversed(range(self.viewer_layout2D.count())): 
                                 self.viewer_layout2D.itemAt(i).widget().setParent(None)
                             
@@ -664,7 +668,6 @@ class MainWindow(QMainWindow):
                             return
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to read Assets.json: {e}")
-        
         image_path = self.image_paths.get(position)
         if image_path:
             self.path = os.path.join(self.active_folder, "Data.json")
@@ -773,8 +776,8 @@ class MainWindow(QMainWindow):
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
-        Ax = start_point_2d[0] - image_width / 2
-        Ay = -(start_point_2d[1] - image_height / 2)
+        Ax = (start_point_2d[0] - image_width / 2 ) * 0.2
+        Ay = -(start_point_2d[1] - image_height / 2) * 0.2
         start_point = np.array([Ax, Ay, 0])  
         end_offset = np.array([length, 0, 0])  
         
