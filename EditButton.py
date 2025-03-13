@@ -66,6 +66,10 @@ class EditButton(QPushButton):
         )
         self.theme_action.setText("Switch to Light Theme" if is_dark else "Switch to Dark Theme")
         self.main_window.setStyleSheet(stylesheet)
+        
+        for widget in self.main_window.viewer_layout2D.children():
+            if isinstance(widget, SegmentAndMap):
+                widget.apply_theme(is_dark)
 
         # Update button colors properly
         button_color = "white" if is_dark else "#333333"

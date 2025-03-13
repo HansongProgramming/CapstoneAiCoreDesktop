@@ -2,11 +2,11 @@ from imports import *
 class SegmentAndMap(QWidget):
     dataUpdated = pyqtSignal(str)  
 
-    def __init__(self, image_path, jsonPath, position, parent=None):
+    def __init__(self, image_path, jsonPath, position,main_window, parent=None):
         super().__init__(parent)
+        self.main_window = main_window  # Store reference to MainWindow
         self.json_file = jsonPath
         self.position = position 
-        self.setWindowTitle("Image Interaction")
         self.image_path = image_path
         self.model_path = os.path.abspath(self.get_resource_path('models/sam_vit_b_01ec64.pth'))
         
@@ -29,6 +29,7 @@ class SegmentAndMap(QWidget):
         self.space_pressed = False
         self.mask_display_queue = []
         self.init_ui()
+        self.apply_theme(self.main_window.is_dark_theme)
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
@@ -84,8 +85,13 @@ class SegmentAndMap(QWidget):
         
         self.graphics_view.setFocusPolicy(Qt.StrongFocus)
         
-        self.setStyleSheet(self.load_stylesheet(self.get_resource_path("style/style.css")))
         
+    def apply_theme(self, is_dark):
+        print(f"Applying theme in SegmentAndMap: {'Dark' if is_dark else 'Light'}")  # Debugging
+        stylesheet = self.main_window.load_stylesheet(
+            self.main_window.get_resource_path("style/dark.css" if is_dark else "style/light.css")
+        )
+        self.setStyleSheet(stylesheet)
     def export_scene(self):
         scene_rect = self.scene.sceneRect()
         

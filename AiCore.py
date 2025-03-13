@@ -28,6 +28,11 @@ class MainWindow(QMainWindow):
         self.label_Actors = []
         self.average_end_point = np.array([0.0, 0.0, 0.0])  
         self.previous_data = None  
+        
+        self.is_fps_mode = False
+        self.move_speed = 1.3
+        self.mouse_sensitivity = 0.1
+        self.keys_pressed = set()
 
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
@@ -46,6 +51,7 @@ class MainWindow(QMainWindow):
 
         self.plotter3D = QtInteractor(self.viewer3D)
         self.plotter3D.installEventFilter(self)
+        self.camera = self.plotter3D.renderer.GetActiveCamera()
         self.picker = vtk.vtkCellPicker()
         self.picker.SetTolerance(0.01)
         self.plotter3D.iren.add_observer("LeftButtonPressEvent",self.on_pick)
@@ -64,6 +70,8 @@ class MainWindow(QMainWindow):
         self.export = QPushButton("Export")
         self.add_head_btn = QPushButton("Add Head")
         self.close_btn = QPushButton("Hide Spatters")
+        self.delete_button = QPushButton("Delete Selected")
+        self.delete_button.clicked.connect(self.delete_selected_object)
         self.close_btn.clicked.connect(lambda: (self.object_list.setVisible(not self.object_list.isVisible()),  
                                                 self.close_btn.setText("Show Spatters" if self.object_list.isHidden() else "Hide Spatters")))
         self.add_head_btn.clicked.connect(self.add_head)
@@ -72,6 +80,8 @@ class MainWindow(QMainWindow):
         self.docker3d.addWidget(self.add_head_btn)
         self.docker3d.addWidget(self.export)
         self.docker3d.addWidget(self.close_btn)
+        self.docker3d.addWidget(self.delete_button)
+
         
         self.viewer_layout3D.addLayout(self.docker3d)
         self.viewer_layout3D.addWidget(self.plotter3D.interactor)
@@ -201,20 +211,16 @@ class MainWindow(QMainWindow):
             self.analysis_layout.addWidget(button, 0, i)
             
         self.sidebar_layout.addWidget(self.analysis_frame)
-
-        self.delete_button = QPushButton("Delete Selected")
-        self.delete_button.clicked.connect(self.delete_selected_object)
-        self.sidebar_layout.addWidget(self.delete_button)
         
-        rotate_90_btn = QPushButton("Rotate 90°")
-        rotate_neg_90_btn = QPushButton("Rotate -90°")
-        flip_h_btn = QPushButton("Flip Horizontal")
-        flip_v_btn = QPushButton("Flip Vertical")
-
-        self.sidebar_layout.addWidget(rotate_90_btn)
-        self.sidebar_layout.addWidget(rotate_neg_90_btn)
-        self.sidebar_layout.addWidget(flip_h_btn)
-        self.sidebar_layout.addWidget(flip_v_btn)
+        self.player_mode = QPushButton("Rig Camera")
+        self.sidebar_layout.addWidget(self.player_mode)
+        self.player_mode.clicked.connect(self.toggle_fps_mode)
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_movement)
+        self.timer.start(16)  # ~60 FPS
+        
+        self.last_mouse_x = None
+        self.last_mouse_y = None
 
         self.sidebar_layout.addStretch()
 
@@ -249,6 +255,59 @@ class MainWindow(QMainWindow):
             pyi_splash.close()
         self.plotter3D.set_background("#3f3f3f")
         self.configure_plotter()
+        
+    def toggle_fps_mode(self):
+        self.is_fps_mode = not self.is_fps_mode
+        self.player_mode.setText("Exit Rig Mode" if self.is_fps_mode else "Rig Camera")
+    
+    def keyPressEvent(self, event):
+        if self.is_fps_mode:
+            self.keys_pressed.add(event.key())
+    
+    def keyReleaseEvent(self, event):
+        if self.is_fps_mode:
+            self.keys_pressed.discard(event.key())
+    
+    def mouseMoveEvent(self, event):
+        if self.is_fps_mode:
+            if self.last_mouse_x is None:
+                self.last_mouse_x = event.x()
+                self.last_mouse_y = event.y()
+                return
+
+            dx = event.x() - self.last_mouse_x
+            dy = event.y() - self.last_mouse_y
+            self.last_mouse_x = event.x()
+            self.last_mouse_y = event.y()
+            
+            self.rotate_camera(-dx * self.mouse_sensitivity, -dy * self.mouse_sensitivity)
+    
+    def rotate_camera(self, yaw, pitch):
+        self.camera.Yaw(yaw)
+        self.camera.Pitch(pitch)
+        self.plotter3D.render()
+    
+    def update_movement(self):
+        if not self.is_fps_mode:
+            return
+        
+        cam_pos = np.array(self.camera.GetPosition())
+        cam_dir = np.array(self.camera.GetDirectionOfProjection())
+        cam_up = np.array(self.camera.GetViewUp())
+        cam_right = np.cross(cam_dir, cam_up)  
+        cam_right /= np.linalg.norm(cam_right)  
+        
+        if Qt.Key_W in self.keys_pressed:
+            cam_pos += cam_dir * self.move_speed
+        if Qt.Key_S in self.keys_pressed:
+            cam_pos -= cam_dir * self.move_speed
+        if Qt.Key_A in self.keys_pressed:
+            cam_pos -= cam_right * self.move_speed
+        if Qt.Key_D in self.keys_pressed:
+            cam_pos += cam_right * self.move_speed
+        
+        self.camera.SetPosition(cam_pos.tolist())
+        self.plotter3D.render()
         
     def load_theme_setting(self):
         if os.path.exists(self.settings_file):
@@ -421,7 +480,6 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "Please load an image for the selected orientation.")
 
     def create_plane(self, position, width, height, texture):
-        self.configure_plotter()
         plane_center = {
             "floor": (0, 0, 0),
             "right": (self.default_size[0] / 2, 0, self.default_size[0]/2),
@@ -652,10 +710,10 @@ class MainWindow(QMainWindow):
         
         elif orientation == "back":
             start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-            rotation_z = R.from_euler('y', convergence, degrees=True) 
+            rotation_z = R.from_euler('y', -convergence, degrees=True) 
             rotated_offset = rotation_z.apply(end_offset)
 
-            rotation_x = R.from_euler('x', impact, degrees=True)
+            rotation_x = R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
             
 
