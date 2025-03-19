@@ -68,6 +68,8 @@ class MenuButton(QPushButton):
                 self.main_window.active_folder = folder_path
                 self.main_window.load_objects_from_json()
                 self.main_window.enableUI(canEnable)
+                self.main_window.json_file = os.path.join(folder_path, "Data.json")  # ✅ Ensure JSON is set
+                print(f"JSON File Set: {self.main_window.json_file}")  # ✅ Debugging lin
 
                 self.main_window.plotter3D.clear()
                 self.main_window.plotter3D.renderer.RemoveAllViewProps()
@@ -82,6 +84,7 @@ class MenuButton(QPushButton):
                 self.main_window.AngleReport.setText("Impact Angle: 0")
                 self.main_window.HeightReport.setText("Point of Origin: 0")
                 self.main_window.Conclusive.setText("")
+                self.main_window.load_objects_from_json()
 
                 assets_file = os.path.join(self.main_window.active_folder, "Assets.json")
                 if os.path.exists(assets_file):
@@ -104,8 +107,6 @@ class MenuButton(QPushButton):
                                     self.main_window.add_plane_with_image(position)
                     except Exception as e:
                         QMessageBox.warning(self, "Error", f"Failed to load assets: {e}")
-
-                self.main_window.load_objects_from_json()
 
 
         elif action.text() == "Generate Report": 

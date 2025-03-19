@@ -28,7 +28,8 @@ class MainWindow(QMainWindow):
         self.label_Actors = []
         self.average_end_point = np.array([0.0, 0.0, 0.0])  
         self.previous_data = None  
-        
+        self.json_file = None  # Ensure it exists from the start
+
         self.is_fps_mode = False
         self.move_speed = 1.3
         self.mouse_sensitivity = 0.1
@@ -371,7 +372,7 @@ class MainWindow(QMainWindow):
         
         self.ground_plane = pv.Plane(i_size=self.default_size[0] * 2, j_size=self.default_size[0]*2)
         ground_texture = pv.read_texture(self.get_resource_path("images/ground.png"))
-        
+        self.ground_plane.translate((0,0,-3), inplace=True)
         
         self.plotter3D.add_mesh(self.ground_plane, texture=ground_texture, name="ground_plane", lighting=False)
         self.plotter3D.add_axes()
@@ -451,6 +452,7 @@ class MainWindow(QMainWindow):
                         if os.path.exists(image_path):
                             self.path = os.path.join(self.active_folder, "Data.json")
                             self.json_file = str(self.path)
+                            print(f"JSON File Path Set: {self.json_file}")  
                             jsonpath = self.json_file
                             dialog = SegmentAndMap(image_path, jsonpath, position, self)
                             dialog.dataUpdated.connect(self.update_from_interaction)
@@ -657,7 +659,7 @@ class MainWindow(QMainWindow):
     def generate_3d_line(self, segment, color="red"):          
         self.update_object_list()
 
-        label = segment["segment_number"]
+        label = f"Spatter {self.segments.index(segment) + 1}"
         impact = segment["impact"]
         convergence = np.array(segment["convergence_angle_3d"])  
         start_point_2d = np.array(segment["center"])
@@ -717,7 +719,6 @@ class MainWindow(QMainWindow):
             rotation_x = R.from_euler('x', -impact, degrees=True)
             final_offset = rotation_x.apply(rotated_offset)
             
-
         end_point = start_point + final_offset
 
         line = pv.Line(start_point, end_point)
@@ -804,29 +805,53 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No object selected for deletion.")
             return
 
-        for item in selected_items:
-            index = self.object_list.row(item)
-            del self.segments[index]
-            self.update_object_list()
+        # Ensure the JSON file path is set
+        if not hasattr(self, "json_file") or not self.json_file:
+            QMessageBox.warning(self, "Error", "JSON file path is not set.")
+            return
 
-        with open(self.json_file, 'w') as file:
-            json.dump(self.segments, file)
+        # Print JSON file path for debugging
+        print(f"Updating JSON file: {self.json_file}")
 
-        # Remove all 3D actors (including point labels)
+        # Remove selected spatters from self.segments
+        deleted_indices = [self.object_list.row(item) for item in selected_items]
+        self.segments = [s for i, s in enumerate(self.segments) if i not in deleted_indices]
+
+        # Renumber remaining segments
+        for i, segment in enumerate(self.segments):
+            segment["segment_number"] = i + 1
+
+        # Write updated data to JSON
+        try:
+            with open(self.json_file, "w") as file:
+                json.dump(self.segments, file, indent=4)
+            print("JSON file successfully updated.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to update JSON file: {e}")
+            return
+
+        # Clear UI list and remove 3D elements
+        self.update_object_list()
+
+        # Remove all 3D actors (lines, cones, labels)
+        # Remove only spatter-related objects (lines, cones, labels)
         actors_to_remove = []
         for actor in self.plotter3D.renderer.GetActors():
-            if isinstance(actor, vtk.vtkActor) or isinstance(actor, vtk.vtkFollower):
-                if not actor.GetTexture():
+            if isinstance(actor, vtk.vtkActor):
+                # Keep planes and ground plane intact
+                if actor not in self.mesh_map and actor.GetProperty().GetRepresentation() != 2:  # 2 = SURFACE mode
                     actors_to_remove.append(actor)
 
+
+        # Actually remove the collected actors
         for actor in actors_to_remove:
             self.plotter3D.renderer.RemoveActor(actor)
 
-        # Remove point labels
-        if hasattr(self, 'label_actors') and self.label_actors:
-            for actor in self.label_actors:
-                self.plotter3D.remove_actor(actor)
-            self.label_actors.clear()
+        # Remove labels associated with deleted spatters
+        if self.label_Actors:
+            for label_actor in self.label_Actors:
+                self.plotter3D.remove_actor(label_actor)
+            self.label_Actors.clear()
 
         # Reset stored end points
         self.end_points = []
@@ -835,6 +860,9 @@ class MainWindow(QMainWindow):
         # Redraw remaining spatters
         for segment in self.segments:
             self.generate_3d_line(segment)
+
+        self.plotter3D.update()
+
 
     def on_object_selected(self, item):
         index = self.object_list.row(item)
