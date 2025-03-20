@@ -230,7 +230,10 @@ class SegmentAndMap(QWidget):
         mask_pixmap = QPixmap.fromImage(qimage)
         mask_item = QGraphicsPixmapItem(mask_pixmap)
         mask_item.setZValue(1)
-        self.scene.addItem(mask_item)
+        if self.mask_item is not None:
+            self.scene.removeItem(self.mask_item)
+        self.mask_item = mask_item
+        self.scene.addItem(self.mask_item)
 
         return mask_item
 
@@ -238,10 +241,14 @@ class SegmentAndMap(QWidget):
 
     def process_spatter(self, mask):
         y, x = np.where(mask > 0)
+        
+        if len(x) == 0 or len(y) == 0:  # Avoid NaN errors
+            print("Warning: Empty mask detected in process_spatter")
+            return None, None  # Return None instead of crashing
 
         center_x = int(np.mean(x))
         center_y = int(np.mean(y))
-
+        
         line_angle = self.calculate_angle(mask)  
         line_endpoints = self.draw_convergence_line(center_x, center_y, line_angle)
         impact_angle = self.calculate_impact_angle(mask)
@@ -261,13 +268,32 @@ class SegmentAndMap(QWidget):
         else:
             angle_3d = None  
 
+        # Ensure positive_direction is closest to convergence_area_center
+        if hasattr(self, "convergence_area_center"):
+            cx, cy = self.convergence_area_center
+
+            # Compute distances from both endpoints to convergence center
+            d1 = (line_endpoints[0][0] - cx) ** 2 + (line_endpoints[0][1] - cy) ** 2
+            d2 = (line_endpoints[1][0] - cx) ** 2 + (line_endpoints[1][1] - cy) ** 2
+
+            # Assign based on closest distance
+            if d1 < d2:
+                positive_direction = line_endpoints[0]
+                negative_direction = line_endpoints[1]
+            else:
+                positive_direction = line_endpoints[1]
+                negative_direction = line_endpoints[0]
+        else:
+            positive_direction = line_endpoints[0]
+            negative_direction = line_endpoints[1]
+
         segment_data = {
             "center": [center_x, center_y],
             "angle": float(90 - line_angle),  
             "impact": float(impact_angle),  
             "line_endpoints": {
-                "positive_direction": [int(line_endpoints[0][0]), int(line_endpoints[0][1])],
-                "negative_direction": [int(line_endpoints[1][0]), int(line_endpoints[1][1])]
+                "positive_direction": [int(positive_direction[0]), int(positive_direction[1])],
+                "negative_direction": [int(negative_direction[0]), int(negative_direction[1])]
             },
             "spatter_count": num_spatters,
             "origin": self.position,

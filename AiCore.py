@@ -28,8 +28,7 @@ class MainWindow(QMainWindow):
         self.label_Actors = []
         self.average_end_point = np.array([0.0, 0.0, 0.0])  
         self.previous_data = None  
-        self.json_file = None  # Ensure it exists from the start
-
+        self.json_file = None 
         self.is_fps_mode = False
         self.move_speed = 1.3
         self.mouse_sensitivity = 0.1
@@ -656,93 +655,195 @@ class MainWindow(QMainWindow):
                 self.texture_select.setCurrentIndex(index)
 
 # * LINE and Report Functions
-    def generate_3d_line(self, segment, color="red"):          
-        self.update_object_list()
+    # def generate_3d_line(self, segment, color="red"):          
+    #     self.update_object_list()
 
-        label = f"Spatter {self.segments.index(segment) + 1}"
-        impact = segment["impact"]
-        convergence = np.array(segment["convergence_angle_3d"])  
-        start_point_2d = np.array(segment["center"])
-        length = self.default_size[0] if self.default_size[0] > self.default_size[1] else self.default_size[1]
+    #     label = f"Spatter {self.segments.index(segment) + 1}"
+    #     impact = segment["impact"]
+    #     convergence = np.array(segment["convergence_angle_3d"])  
+    #     start_point_2d = np.array(segment["center"])
+    #     length = self.default_size[0] if self.default_size[0] > self.default_size[1] else self.default_size[1]
+    #     orientation = segment.get("origin", self.texture_select.currentText().lower())
+
+    #     image_width = self.default_size[0]
+    #     image_height = self.default_size[1]
+
+    #     Ax = (start_point_2d[0] * 0.2) - image_width / 2  
+    #     Ay = -((start_point_2d[1] * 0.2) - image_height / 2)
+    #     start_point = np.array([Ax, Ay, 0])  
+    #     end_offset = np.array([length, 0, 0])
+        
+    #     adjusted_convergence = math.tan(math.radians(convergence))
+    #     print(adjusted_convergence)
+        
+    #     if convergence < 0:
+    #         impact = - impact
+        
+    #     if orientation == "floor":
+    #         rotation_z = R.from_euler('z', convergence, degrees=True)
+    #         rotated_offset = rotation_z.apply(end_offset)
+
+    #         rotation_x = R.from_euler('x', impact, degrees=True)
+    #         final_offset = rotation_x.apply(rotated_offset)
+            
+    #     elif orientation == "right":
+    #         start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
+    #         end_offset = np.array([0, 0, -length])  
+    #         rotation_z = R.from_euler('x', convergence, degrees=True) 
+    #         rotated_offset = rotation_z.apply(end_offset)
+
+    #         rotation_x = R.from_euler('z', impact, degrees=True)
+    #         final_offset = rotation_x.apply(rotated_offset)    
+                
+    #     elif orientation == "left":
+    #         start_point = np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
+    #         end_offset = np.array([0, 0, -length])  
+    #         rotation_z = R.from_euler('x', convergence, degrees=True)
+    #         rotated_offset = rotation_z.apply(end_offset)
+
+    #         rotation_x = R.from_euler('z', -impact, degrees=True) 
+    #         final_offset = rotation_x.apply(rotated_offset) 
+
+    #     elif orientation == "front":
+    #         end_offset = np.array([length, 0, 0])  
+    #         start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
+    #         rotation_z = R.from_euler('y', -convergence, degrees=True) 
+    #         rotated_offset = rotation_z.apply(end_offset)
+
+    #         rotation_x = R.from_euler('x', impact, degrees=True)
+    #         final_offset = rotation_x.apply(rotated_offset)
+        
+    #     elif orientation == "back":
+    #         start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
+    #         rotation_z = R.from_euler('y', -convergence, degrees=True) 
+    #         rotated_offset = rotation_z.apply(end_offset)
+
+    #         rotation_x = R.from_euler('x', -impact, degrees=True)
+    #         final_offset = rotation_x.apply(rotated_offset)
+            
+    #     end_point = start_point + final_offset
+
+    #     line = pv.Line(start_point, end_point)
+
+    #     direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
+
+    #     cone_position = start_point
+    #     cone_height = 50 
+    #     cone_radius = 3
+
+    #     cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
+        
+    #     actor = self.plotter3D.add_point_labels(
+    #         [start_point], [label], render_points_as_spheres=False,
+    #         font_size=12, text_color="white", shape_color=(0, 0, 0, 0.2),
+    #         background_color=None, background_opacity=0.2
+    #     )
+        
+    #     self.label_Actors.append(actor)
+        
+    #     self.plotter3D.add_mesh(line, color=color, line_width=1.4)
+    #     self.plotter3D.add_mesh(cone, color=color)
+
+    #     self.plotter3D.update()
+
+    #     self.Conclusive.setText(f"Classification: Medium Velocity")
+
+    #     self.end_points.append(end_point)
+    #     self.average_end_point = np.mean(self.end_points, axis=0)
+        
+        
+    def generate_3d_line(self, segment, color="red"):
+        self.update_object_list()
+        self.label= segment["spatter_count"]
+        self.angle = segment["angle"]
+        self.start_point_2d = segment["center"]
+        self.spatterCount = segment["spatter_count"]
+        self.end_point2d = segment["line_endpoints"]["positive_direction"]
+        self.impact_angles = []
+
         orientation = segment.get("origin", self.texture_select.currentText().lower())
 
         image_width = self.default_size[0]
         image_height = self.default_size[1]
 
-        Ax = (start_point_2d[0] * 0.2) - image_width / 2  
-        Ay = -((start_point_2d[1] * 0.2) - image_height / 2)
-        start_point = np.array([Ax, Ay, 0])  
-        end_offset = np.array([length, 0, 0])  
-        
-        if convergence < 0:
-            impact = - impact
-        
-        if orientation == "floor":
-            rotation_z = R.from_euler('z', convergence, degrees=True)
-            rotated_offset = rotation_z.apply(end_offset)
+        self.impact_angles.append(abs(self.angle))
 
-            rotation_x = R.from_euler('x', impact, degrees=True)
-            final_offset = rotation_x.apply(rotated_offset)
-            
-        elif orientation == "right":
+        Ax = (self.start_point_2d[0] * 0.2) - image_width / 2
+        Ay = -((self.start_point_2d[1] * 0.2) - image_height / 2)
+        Az = 0
+
+        Bx = (self.end_point2d[0] * 0.2) - image_width / 2
+        By = -((self.end_point2d[1] * 0.2) - image_height / 2)
+        
+        initAx = Ax
+        initAy = Ay
+        initBx = Bx
+        initBy = By
+
+        Bxy = math.sqrt(((initBx - (initAx))**2) + ((initBy - (initAy))**2))
+        angleInDeg = self.angle
+        Bxyz = math.sin(math.radians(angleInDeg))
+        self.Bz = (Bxyz * Bxy)
+
+        dx = Bx - Ax
+        dy = By - Ay
+        if dx == 0 and dy == 0:
+            self.direction = "No movement"
+        else:
+            angle = math.degrees(math.atan2(dy, dx))
+            if angle < 0:
+                angle += 360
+
+            if 22.5 <= angle < 67.5:
+                self.direction = "Northeast"
+            elif 67.5 <= angle < 112.5:
+                self.direction = "North"
+            elif 112.5 <= angle < 157.5:
+                self.direction = "Northwest"
+            elif 157.5 <= angle < 202.5:
+                self.direction = "West"
+            elif 202.5 <= angle < 247.5:
+                self.direction = "Southwest"
+            elif 247.5 <= angle < 292.5:
+                self.direction = "South" 
+            elif 292.5 <= angle < 337.5:
+                self.direction = "Southeast"
+            else:
+                self.direction = "East"
+        
+        if orientation == "right":
             start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
-            end_offset = np.array([0, 0, -length])  
-            rotation_z = R.from_euler('x', convergence, degrees=True) 
-            rotated_offset = rotation_z.apply(end_offset)
-
-            rotation_x = R.from_euler('z', impact, degrees=True)
-            final_offset = rotation_x.apply(rotated_offset)    
-                
+            end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
         elif orientation == "left":
             start_point = np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
-            end_offset = np.array([0, 0, -length])  
-            rotation_z = R.from_euler('x', convergence, degrees=True)
-            rotated_offset = rotation_z.apply(end_offset)
-
-            rotation_x = R.from_euler('z', -impact, degrees=True) 
-            final_offset = rotation_x.apply(rotated_offset) 
-
-        elif orientation == "front":
-            end_offset = np.array([length, 0, 0])  
-            start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-            rotation_z = R.from_euler('y', -convergence, degrees=True) 
-            rotated_offset = rotation_z.apply(end_offset)
-
-            rotation_x = R.from_euler('x', impact, degrees=True)
-            final_offset = rotation_x.apply(rotated_offset)
-        
+            end_point = np.array([(self.default_size[0] / 2 - Bx), (self.default_size[1]/2 + By), (self.default_size[0] / 2 - Bx)])
         elif orientation == "back":
             start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-            rotation_z = R.from_euler('y', -convergence, degrees=True) 
-            rotated_offset = rotation_z.apply(end_offset)
+            end_point = np.array([(Bx - self.default_size[0] / 2), (self.default_size[1] /2 + By), (self.default_size[1] / 2 + By)])
+        elif orientation == "front":
+            start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
+            end_point = np.array([(Bx - self.default_size[0] / 2), -(self.default_size[1] / 2 + By), (self.default_size[1] / 2 + By)])
+        elif orientation == "floor":
+            start_point = np.array([Ax, Ay, Az])
+            end_point = np.array([Bx, By, abs(self.Bz)])
 
-            rotation_x = R.from_euler('x', -impact, degrees=True)
-            final_offset = rotation_x.apply(rotated_offset)
-            
-        end_point = start_point + final_offset
 
         line = pv.Line(start_point, end_point)
 
         direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
-
-        cone_position = start_point
-        cone_height = 50 
+        
+        cone_position = start_point  
+        cone_height = 50  
         cone_radius = 3
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
-        
-        actor = self.plotter3D.add_point_labels(
-            [start_point], [label], render_points_as_spheres=False,
-            font_size=12, text_color="white", shape_color=(0, 0, 0, 0.2),
-            background_color=None, background_opacity=0.2
-        )
-        
-        self.label_Actors.append(actor)
-        
+
+        self.plotter3D.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2),background_color=None,background_opacity=0.2,)
         self.plotter3D.add_mesh(line, color=color, line_width=1.4)
         self.plotter3D.add_mesh(cone, color=color)
 
         self.plotter3D.update()
+
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
@@ -797,6 +898,9 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Success", "Report saved successfully.")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to save report: {e}")
+            
+            
+    
 
 # * JSON FUNCTIONS
     def delete_selected_object(self):
