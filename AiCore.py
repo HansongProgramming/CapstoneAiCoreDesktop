@@ -655,106 +655,10 @@ class MainWindow(QMainWindow):
                 self.texture_select.setCurrentIndex(index)
 
 # * LINE and Report Functions
-    # def generate_3d_line(self, segment, color="red"):          
-    #     self.update_object_list()
 
-    #     label = f"Spatter {self.segments.index(segment) + 1}"
-    #     impact = segment["impact"]
-    #     convergence = np.array(segment["convergence_angle_3d"])  
-    #     start_point_2d = np.array(segment["center"])
-    #     length = self.default_size[0] if self.default_size[0] > self.default_size[1] else self.default_size[1]
-    #     orientation = segment.get("origin", self.texture_select.currentText().lower())
-
-    #     image_width = self.default_size[0]
-    #     image_height = self.default_size[1]
-
-    #     Ax = (start_point_2d[0] * 0.2) - image_width / 2  
-    #     Ay = -((start_point_2d[1] * 0.2) - image_height / 2)
-    #     start_point = np.array([Ax, Ay, 0])  
-    #     end_offset = np.array([length, 0, 0])
-        
-    #     adjusted_convergence = math.tan(math.radians(convergence))
-    #     print(adjusted_convergence)
-        
-    #     if convergence < 0:
-    #         impact = - impact
-        
-    #     if orientation == "floor":
-    #         rotation_z = R.from_euler('z', convergence, degrees=True)
-    #         rotated_offset = rotation_z.apply(end_offset)
-
-    #         rotation_x = R.from_euler('x', impact, degrees=True)
-    #         final_offset = rotation_x.apply(rotated_offset)
-            
-    #     elif orientation == "right":
-    #         start_point = np.array([(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
-    #         end_offset = np.array([0, 0, -length])  
-    #         rotation_z = R.from_euler('x', convergence, degrees=True) 
-    #         rotated_offset = rotation_z.apply(end_offset)
-
-    #         rotation_x = R.from_euler('z', impact, degrees=True)
-    #         final_offset = rotation_x.apply(rotated_offset)    
-                
-    #     elif orientation == "left":
-    #         start_point = np.array([-(self.default_size[0] / 2), Ay, (self.default_size[0] / 2 - Ax)])
-    #         end_offset = np.array([0, 0, -length])  
-    #         rotation_z = R.from_euler('x', convergence, degrees=True)
-    #         rotated_offset = rotation_z.apply(end_offset)
-
-    #         rotation_x = R.from_euler('z', -impact, degrees=True) 
-    #         final_offset = rotation_x.apply(rotated_offset) 
-
-    #     elif orientation == "front":
-    #         end_offset = np.array([length, 0, 0])  
-    #         start_point = np.array([Ax, (self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-    #         rotation_z = R.from_euler('y', -convergence, degrees=True) 
-    #         rotated_offset = rotation_z.apply(end_offset)
-
-    #         rotation_x = R.from_euler('x', impact, degrees=True)
-    #         final_offset = rotation_x.apply(rotated_offset)
-        
-    #     elif orientation == "back":
-    #         start_point = np.array([Ax, -(self.default_size[1] / 2), (self.default_size[1] / 2 + Ay)])
-    #         rotation_z = R.from_euler('y', -convergence, degrees=True) 
-    #         rotated_offset = rotation_z.apply(end_offset)
-
-    #         rotation_x = R.from_euler('x', -impact, degrees=True)
-    #         final_offset = rotation_x.apply(rotated_offset)
-            
-    #     end_point = start_point + final_offset
-
-    #     line = pv.Line(start_point, end_point)
-
-    #     direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
-
-    #     cone_position = start_point
-    #     cone_height = 50 
-    #     cone_radius = 3
-
-    #     cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
-        
-    #     actor = self.plotter3D.add_point_labels(
-    #         [start_point], [label], render_points_as_spheres=False,
-    #         font_size=12, text_color="white", shape_color=(0, 0, 0, 0.2),
-    #         background_color=None, background_opacity=0.2
-    #     )
-        
-    #     self.label_Actors.append(actor)
-        
-    #     self.plotter3D.add_mesh(line, color=color, line_width=1.4)
-    #     self.plotter3D.add_mesh(cone, color=color)
-
-    #     self.plotter3D.update()
-
-    #     self.Conclusive.setText(f"Classification: Medium Velocity")
-
-    #     self.end_points.append(end_point)
-    #     self.average_end_point = np.mean(self.end_points, axis=0)
-        
-        
     def generate_3d_line(self, segment, color="red"):
         self.update_object_list()
-        self.label= segment["spatter_count"]
+        label = f"Spatter {self.segments.index(segment) + 1}"
         self.angle = segment["angle"]
         self.start_point_2d = segment["center"]
         self.spatterCount = segment["spatter_count"]
@@ -831,19 +735,25 @@ class MainWindow(QMainWindow):
         line = pv.Line(start_point, end_point)
 
         direction_vector = (start_point - end_point) / np.linalg.norm(start_point - end_point)
-        
-        cone_position = start_point  
-        cone_height = 50  
+
+        cone_position = start_point
+        cone_height = 50 
         cone_radius = 3
 
         cone = pv.Cone(center=cone_position, direction=direction_vector, radius=cone_radius, height=cone_height)
-
-        self.plotter3D.add_point_labels([start_point], [self.label],render_points_as_spheres=False, font_size=12, text_color="white", shape_color=(0,0,0,0.2),background_color=None,background_opacity=0.2,)
+        
+        actor = self.plotter3D.add_point_labels(
+            [start_point], [label], render_points_as_spheres=False,
+            font_size=12, text_color="white", shape_color=(0, 0, 0, 0.2),
+            background_color=None, background_opacity=0.2
+        )
+        
+        self.label_Actors.append(actor)
+        
         self.plotter3D.add_mesh(line, color=color, line_width=1.4)
         self.plotter3D.add_mesh(cone, color=color)
 
         self.plotter3D.update()
-
 
         self.Conclusive.setText(f"Classification: Medium Velocity")
 
