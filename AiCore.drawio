@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0" version="26.1.1">
   <diagram name="Page-1" id="USe7JkYApASF65cn7Bxd">
-    <mxGraphModel dx="5995" dy="6525" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1625" dy="2884" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -518,6 +518,21 @@
             <mxPoint x="1276" y="102" as="sourcePoint" />
             <mxPoint x="1402" y="-140" as="targetPoint" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="tfWPRsVwhH4SyhzoojjA-100" value="MainWindow()" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="2840" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="tfWPRsVwhH4SyhzoojjA-102" value="Forensic&amp;nbsp;&lt;div&gt;student / professional&lt;/div&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="2870" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tfWPRsVwhH4SyhzoojjA-105" value="TitleBar()" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="2890" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="tfWPRsVwhH4SyhzoojjA-106" value="MenuBar()" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="2940" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="tfWPRsVwhH4SyhzoojjA-107" value="EditBar()" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="2990" width="120" height="40" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
