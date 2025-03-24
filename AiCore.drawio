@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36" version="26.1.1">
   <diagram name="Page-1" id="USe7JkYApASF65cn7Bxd">
-    <mxGraphModel dx="3493" dy="930" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="3749" dy="1063" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -769,10 +769,13 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="j0j34pVLK7sB6COrQDMB-34" value="Installer" style="shape=folder;fontStyle=1;tabWidth=110;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;labelInHeader=1;container=1;collapsible=0;recursiveResize=0;whiteSpace=wrap;" parent="j0j34pVLK7sB6COrQDMB-48" vertex="1">
-          <mxGeometry x="30" y="170" width="170" height="100" as="geometry" />
+          <mxGeometry x="30" y="170" width="280" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="j0j34pVLK7sB6COrQDMB-36" value="setup.exe" style="html=1;whiteSpace=wrap;" parent="j0j34pVLK7sB6COrQDMB-34" vertex="1">
+        <mxCell id="j0j34pVLK7sB6COrQDMB-36" value="MainWindow()" style="html=1;whiteSpace=wrap;" parent="j0j34pVLK7sB6COrQDMB-34" vertex="1">
           <mxGeometry x="20" y="50" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Yg8NXaC7hF-zgnAQYQYs-54" value="DownloaderThread()" style="html=1;whiteSpace=wrap;" vertex="1" parent="j0j34pVLK7sB6COrQDMB-34">
+          <mxGeometry x="140" y="50" width="120" height="30" as="geometry" />
         </mxCell>
         <mxCell id="j0j34pVLK7sB6COrQDMB-41" value="" style="endArrow=none;html=1;rounded=0;fontSize=12;startSize=8;endSize=8;curved=1;" parent="j0j34pVLK7sB6COrQDMB-48" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
@@ -799,7 +802,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="j0j34pVLK7sB6COrQDMB-45" value="Landing Page" style="shape=folder;fontStyle=1;tabWidth=110;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;labelInHeader=1;container=1;collapsible=0;recursiveResize=0;whiteSpace=wrap;" parent="j0j34pVLK7sB6COrQDMB-48" vertex="1">
-          <mxGeometry x="30" width="170" height="100" as="geometry" />
+          <mxGeometry x="84" width="170" height="100" as="geometry" />
         </mxCell>
         <mxCell id="j0j34pVLK7sB6COrQDMB-46" value="AiCore Website" style="html=1;whiteSpace=wrap;" parent="j0j34pVLK7sB6COrQDMB-45" vertex="1">
           <mxGeometry x="20" y="50" width="110" height="30" as="geometry" />
@@ -1476,6 +1479,29 @@
         </mxCell>
         <mxCell id="Yg8NXaC7hF-zgnAQYQYs-41" value="AiCore.exe" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="Yg8NXaC7hF-zgnAQYQYs-42">
           <mxGeometry x="330" y="255" width="115" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Yg8NXaC7hF-zgnAQYQYs-53" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="2065" y="1390" width="170" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="Yg8NXaC7hF-zgnAQYQYs-43" value="Installer" style="shape=folder;fontStyle=1;tabWidth=110;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;labelInHeader=1;container=1;collapsible=0;recursiveResize=0;whiteSpace=wrap;" vertex="1" parent="Yg8NXaC7hF-zgnAQYQYs-53">
+          <mxGeometry x="5" y="140" width="160" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="Yg8NXaC7hF-zgnAQYQYs-44" value="MainWindow()" style="html=1;whiteSpace=wrap;" vertex="1" parent="Yg8NXaC7hF-zgnAQYQYs-43">
+          <mxGeometry width="110" height="30" relative="1" as="geometry">
+            <mxPoint x="20" y="50" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Yg8NXaC7hF-zgnAQYQYs-48" value="DownloaderThread()" style="html=1;whiteSpace=wrap;" vertex="1" parent="Yg8NXaC7hF-zgnAQYQYs-43">
+          <mxGeometry x="20" y="90" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Yg8NXaC7hF-zgnAQYQYs-49" value="Landing Page" style="shape=folder;fontStyle=1;tabWidth=110;tabHeight=30;tabPosition=left;html=1;boundedLbl=1;labelInHeader=1;container=1;collapsible=0;recursiveResize=0;whiteSpace=wrap;" vertex="1" parent="Yg8NXaC7hF-zgnAQYQYs-53">
+          <mxGeometry width="170" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Yg8NXaC7hF-zgnAQYQYs-50" value="AiCore Website" style="html=1;whiteSpace=wrap;" vertex="1" parent="Yg8NXaC7hF-zgnAQYQYs-49">
+          <mxGeometry x="20" y="50" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Yg8NXaC7hF-zgnAQYQYs-52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.498;entryY=-0.001;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="Yg8NXaC7hF-zgnAQYQYs-53" source="Yg8NXaC7hF-zgnAQYQYs-49" target="Yg8NXaC7hF-zgnAQYQYs-43">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
