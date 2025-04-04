@@ -316,11 +316,12 @@ class SegmentAndMap(QWidget):
         major_axis = eigenvectors[:, 1]
 
         eccentricity = np.sqrt(1 - (eigenvalues[0] / eigenvalues[1]))
+        print(f" {round(eccentricity,2)}, {major_axis[1]} , {major_axis[0]} \n")
 
         if eccentricity < 0.3: 
             return 0
         else:
-            angle = math.atan2(major_axis[1], major_axis[0]) * 180 / math.pi
+            angle = (math.atan2(-abs(major_axis[1]), -abs(major_axis[0])) * 180 / math.pi)
             return angle
 
     def calculate_impact_angle(self, mask):
